@@ -1,0 +1,6 @@
+@_10Pearls_Web_Project.Server_HostAddress = http://localhost:5248
+
+GET {{_10Pearls_Web_Project.Server_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

@@ -1,0 +1,7 @@
+<Solution>
+  <Project Path="10pearls_web_project.client/10pearls_web_project.client.esproj">
+    <Build />
+    <Deploy />
+  </Project>
+  <Project Path="10Pearls_Web_Project.Server/10Pearls_Web_Project.Server.csproj" />
+</Solution>
