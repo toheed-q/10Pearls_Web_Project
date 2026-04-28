@@ -2,8 +2,8 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace _10Pearls_Web_Project.Server.Controllers
 {
-    [ApiController]
-    [Route("[controller]")]
+    //[ApiController]
+    //[Route("[controller]")]
     public class WeatherForecastController : ControllerBase
     {
         private static readonly string[] Summaries =
