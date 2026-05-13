@@ -20,8 +20,19 @@ namespace _10Pearls_Web_Project.Server.Controllers
             _logger = logger;
         }
 
-        // Extracts UserId from JWT — used by every endpoint
         private string? CurrentUserId => User.FindFirstValue(ClaimTypes.NameIdentifier);
+        private bool IsAdmin => User.IsInRole("Admin");
+
+        // GET /api/tasks/stats
+        [HttpGet("stats")]
+        public async Task<IActionResult> GetStats()
+        {
+            var userId = CurrentUserId;
+            if (userId == null) return Unauthorized();
+
+            var stats = await _taskService.GetStatsAsync(userId, IsAdmin);
+            return Ok(stats);
+        }
 
         // POST /api/tasks
         [HttpPost]
@@ -43,7 +54,7 @@ namespace _10Pearls_Web_Project.Server.Controllers
             var userId = CurrentUserId;
             if (userId == null) return Unauthorized();
 
-            var tasks = await _taskService.GetTasksAsync(userId);
+            var tasks = await _taskService.GetTasksAsync(userId, IsAdmin);
             return Ok(tasks);
         }
 
@@ -54,7 +65,7 @@ namespace _10Pearls_Web_Project.Server.Controllers
             var userId = CurrentUserId;
             if (userId == null) return Unauthorized();
 
-            var task = await _taskService.GetTaskByIdAsync(userId, id);
+            var task = await _taskService.GetTaskByIdAsync(userId, id, IsAdmin);
             return task == null ? NotFound(new { message = "Task not found" }) : Ok(task);
         }
 

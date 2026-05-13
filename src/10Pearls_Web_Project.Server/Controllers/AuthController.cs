@@ -59,6 +59,20 @@ namespace _10Pearls_Web_Project.Server.Controllers
             return Ok(data);
         }
 
+        [Authorize(Roles = "Admin")]
+        [HttpPost("promote")]
+        [Consumes("application/json")]
+        public async Task<IActionResult> PromoteToAdmin([FromBody] PromoteDTO dto)
+        {
+            _logger.LogInformation("Promote request for {Email} by Admin {AdminId}",
+                dto.Email, User.FindFirstValue(ClaimTypes.NameIdentifier));
+
+            var (success, error) = await _authService.PromoteToAdminAsync(dto.Email);
+            return success
+                ? Ok(new { message = $"{dto.Email} has been promoted to Admin" })
+                : BadRequest(new { message = error });
+        }
+
         [Authorize]
         [HttpGet("profile")]
         public async Task<IActionResult> GetProfile()

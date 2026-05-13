@@ -75,6 +75,14 @@ try
 
     var app = builder.Build();
 
+    // Seed roles on startup
+    using (var scope = app.Services.CreateScope())
+    {
+        var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
+        var seederLogger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+        await RoleSeeder.SeedAsync(roleManager, seederLogger);
+    }
+
     // Global exception handler — must be first
     app.UseMiddleware<ExceptionMiddleware>();
 

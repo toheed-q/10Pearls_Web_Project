@@ -6,9 +6,10 @@ interface Props {
   tasks: Task[];
   onEdit: (task: Task) => void;
   onDelete: (id: string) => void;
+  showOwner?: boolean;
 }
 
-export function TaskList({ tasks, onEdit, onDelete }: Props) {
+export function TaskList({ tasks, onEdit, onDelete, showOwner = false }: Props) {
   if (tasks.length === 0) {
     return (
       <div className="empty-state">
@@ -21,7 +22,7 @@ export function TaskList({ tasks, onEdit, onDelete }: Props) {
   return (
     <div className="task-grid">
       {tasks.map(task => (
-        <TaskCard key={task.id} task={task} onEdit={onEdit} onDelete={onDelete} />
+        <TaskCard key={task.id} task={task} onEdit={onEdit} onDelete={onDelete} showOwner={showOwner} />
       ))}
     </div>
   );

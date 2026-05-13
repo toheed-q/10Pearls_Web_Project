@@ -5,6 +5,7 @@ interface Props {
   task: Task;
   onEdit: (task: Task) => void;
   onDelete: (id: string) => void;
+  showOwner?: boolean;
 }
 
 const STATUS_LABELS: Record<string, string> = {
@@ -13,7 +14,7 @@ const STATUS_LABELS: Record<string, string> = {
   Completed: 'Completed',
 };
 
-export function TaskCard({ task, onEdit, onDelete }: Props) {
+export function TaskCard({ task, onEdit, onDelete, showOwner = false }: Props) {
   const isOverdue =
     task.status !== 'Completed' && new Date(task.dueDate) < new Date();
 
@@ -38,6 +39,10 @@ export function TaskCard({ task, onEdit, onDelete }: Props) {
         Due: {new Date(task.dueDate).toLocaleDateString()}
         {isOverdue && ' — Overdue'}
       </p>
+
+      {showOwner && (
+        <p className="task-owner">Owner: {task.userId.slice(0, 8)}…</p>
+      )}
 
       <div className="task-actions">
         <button className="btn-edit" onClick={() => onEdit(task)}>Edit</button>

@@ -4,6 +4,7 @@ import type { AuthUser } from '../types/auth';
 interface AuthContextType {
   user: AuthUser | null;
   token: string | null;
+  isAdmin: boolean;
   setAuth: (user: AuthUser, token: string) => void;
   logout: () => void;
 }
@@ -16,6 +17,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return stored ? JSON.parse(stored) : null;
   });
   const [token, setToken] = useState<string | null>(() => localStorage.getItem('auth_token'));
+
+  const isAdmin = user?.role === 'Admin';
 
   const setAuth = useCallback((u: AuthUser, t: string) => {
     setUser(u);
@@ -32,7 +35,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, token, setAuth, logout }}>
+    <AuthContext.Provider value={{ user, token, isAdmin, setAuth, logout }}>
       {children}
     </AuthContext.Provider>
   );

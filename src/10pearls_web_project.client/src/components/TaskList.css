@@ -6,17 +6,18 @@
 
 .empty-state {
   text-align: center;
-  padding: 4rem 1rem;
-  color: var(--text);
+  padding: 5rem 1rem;
+  color: var(--text-secondary);
 }
 
 .empty-state p {
-  font-size: 1.1rem;
-  font-weight: 500;
-  color: var(--text-h);
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--text-primary);
   margin-bottom: 0.5rem;
 }
 
 .empty-state span {
-  font-size: 0.9rem;
+  font-size: 0.875rem;
+  color: var(--text-muted);
 }

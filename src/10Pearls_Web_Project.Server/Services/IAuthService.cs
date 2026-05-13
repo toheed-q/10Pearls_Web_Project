@@ -6,5 +6,6 @@ namespace _10Pearls_Web_Project.Server.Services
     {
         Task<(bool Success, string? Error)> RegisterAsync(RegisterDTO dto);
         Task<(bool Success, AuthResponseDTO? Data, string? Error)> LoginAsync(LoginDTO dto);
+        Task<(bool Success, string? Error)> PromoteToAdminAsync(string email);
     }
 }

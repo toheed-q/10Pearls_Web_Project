@@ -49,7 +49,26 @@ namespace _10Pearls_Web_Project.Server.Services
                 return (false, errors);
             }
 
-            _logger.LogInformation("User {UserId} registered successfully with email {Email}", user.Id, user.Email);
+            // Every new user gets the User role by default
+            await _userManager.AddToRoleAsync(user, "User");
+
+            _logger.LogInformation("User {UserId} registered with role 'User'", user.Id);
+            return (true, null);
+        }
+
+        public async Task<(bool Success, string? Error)> PromoteToAdminAsync(string email)
+        {
+            var user = await _userManager.FindByEmailAsync(email);
+            if (user == null)
+                return (false, $"No user found with email '{email}'");
+
+            if (await _userManager.IsInRoleAsync(user, "Admin"))
+                return (false, "User is already an Admin");
+
+            await _userManager.RemoveFromRoleAsync(user, "User");
+            await _userManager.AddToRoleAsync(user, "Admin");
+
+            _logger.LogInformation("User {UserId} promoted to Admin", user.Id);
             return (true, null);
         }
 
@@ -72,16 +91,21 @@ namespace _10Pearls_Web_Project.Server.Services
             }
 
             var roles = await _userManager.GetRolesAsync(user);
+
+            // Primary role: Admin takes precedence, fallback to User
+            var primaryRole = roles.Contains("Admin") ? "Admin" : "User";
+
             var token = _jwtService.GenerateToken(user, roles);
 
-            _logger.LogInformation("User {UserId} logged in successfully", user.Id);
+            _logger.LogInformation("User {UserId} logged in with role {Role}", user.Id, primaryRole);
 
             return (true, new AuthResponseDTO
             {
                 Token = token,
                 Id = user.Id,
                 Email = user.Email!,
-                FullName = user.FullName ?? string.Empty
+                FullName = user.FullName ?? string.Empty,
+                Role = primaryRole
             }, null);
         }
     }

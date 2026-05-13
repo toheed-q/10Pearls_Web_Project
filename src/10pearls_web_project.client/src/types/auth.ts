@@ -14,10 +14,12 @@ export interface AuthResponse {
   id: string;
   email: string;
   fullName: string;
+  role: string;
 }
 
 export interface AuthUser {
   id: string;
   email: string;
   fullName: string;
+  role: string;
 }

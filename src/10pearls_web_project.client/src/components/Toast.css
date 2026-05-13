@@ -10,17 +10,20 @@
 
 .toast {
   padding: 0.75rem 1.25rem;
-  border-radius: 8px;
-  font-size: 0.9rem;
+  border-radius: 10px;
+  font-size: 0.85rem;
+  font-weight: 500;
   color: #fff;
   cursor: pointer;
   animation: slideIn 0.25s ease;
   max-width: 320px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.35);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255,255,255,0.12);
 }
 
-.toast-success { background: #22c55e; }
-.toast-error   { background: #ef4444; }
+.toast-success { background: rgba(34,197,94,0.85); }
+.toast-error   { background: rgba(239,68,68,0.85); }
 
 @keyframes slideIn {
   from { opacity: 0; transform: translateY(12px); }

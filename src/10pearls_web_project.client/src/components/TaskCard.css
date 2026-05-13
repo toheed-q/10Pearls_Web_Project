@@ -1,113 +1,126 @@
 .task-card {
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 14px;
   padding: 1.25rem;
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
-  transition: box-shadow 0.2s;
+  gap: 0.6rem;
+  backdrop-filter: blur(10px);
+  transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
   text-align: left;
 }
 
 .task-card:hover {
-  box-shadow: var(--shadow);
+  transform: translateY(-3px);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
+  border-color: rgba(255, 255, 255, 0.18);
 }
 
-.task-card.completed {
-  opacity: 0.7;
-}
+.task-card.completed { opacity: 0.6; }
 
+/* ─── Header row ─────────────────────────────────────────────── */
 .task-card-header {
   display: flex;
-  gap: 0.5rem;
+  gap: 0.4rem;
   flex-wrap: wrap;
 }
 
 .badge {
-  font-size: 0.75rem;
-  font-weight: 600;
-  padding: 2px 10px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 2px 9px;
   border-radius: 999px;
   text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.06em;
 }
 
-/* Priority badges */
-.priority-low    { background: #dcfce7; color: #166534; }
-.priority-medium { background: #fef9c3; color: #854d0e; }
-.priority-high   { background: #fee2e2; color: #991b1b; }
+/* Priority */
+.priority-low    { background: rgba(34,197,94,0.18);  color: #86efac; border: 1px solid rgba(34,197,94,0.3); }
+.priority-medium { background: rgba(245,158,11,0.18); color: #fde68a; border: 1px solid rgba(245,158,11,0.3); }
+.priority-high   { background: rgba(239,68,68,0.18);  color: #fca5a5; border: 1px solid rgba(239,68,68,0.3); }
 
-/* Status badges */
-.status-pending    { background: var(--accent-bg); color: var(--accent); }
-.status-inprogress { background: #dbeafe; color: #1d4ed8; }
-.status-completed  { background: #dcfce7; color: #166534; }
+/* Status */
+.status-pending    { background: rgba(124,106,247,0.18); color: #c4b5fd; border: 1px solid rgba(124,106,247,0.3); }
+.status-inprogress { background: rgba(59,130,246,0.18);  color: #93c5fd; border: 1px solid rgba(59,130,246,0.3); }
+.status-completed  { background: rgba(34,197,94,0.18);   color: #86efac; border: 1px solid rgba(34,197,94,0.3); }
 
-@media (prefers-color-scheme: dark) {
-  .priority-low    { background: #14532d; color: #86efac; }
-  .priority-medium { background: #422006; color: #fde68a; }
-  .priority-high   { background: #450a0a; color: #fca5a5; }
-  .status-inprogress { background: #1e3a5f; color: #93c5fd; }
-  .status-completed  { background: #14532d; color: #86efac; }
-}
-
+/* ─── Content ────────────────────────────────────────────────── */
 .task-title {
-  font-size: 1rem;
+  font-size: 0.95rem;
   font-weight: 600;
-  color: var(--text-h);
+  color: var(--text-primary);
   margin: 0;
+  line-height: 1.4;
 }
 
 .task-description {
-  font-size: 0.875rem;
-  color: var(--text);
+  font-size: 0.82rem;
+  color: var(--text-secondary);
   margin: 0;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
+  line-height: 1.5;
 }
 
 .task-due {
-  font-size: 0.8rem;
-  color: var(--text);
+  font-size: 0.78rem;
+  color: var(--text-muted);
   margin: 0;
 }
 
 .task-due.overdue {
-  color: #ef4444;
+  color: #fca5a5;
   font-weight: 600;
 }
 
+.task-owner {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  margin: 0;
+  font-family: var(--mono);
+}
+
+/* ─── Actions ────────────────────────────────────────────────── */
 .task-actions {
   display: flex;
   gap: 0.5rem;
-  margin-top: 0.5rem;
+  margin-top: 0.25rem;
 }
 
-.btn-edit,
-.btn-delete {
+.btn-edit, .btn-delete {
   flex: 1;
   padding: 0.4rem;
-  border-radius: 6px;
-  font-size: 0.85rem;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  font-weight: 500;
   cursor: pointer;
-  border: 1px solid var(--border);
-  transition: background 0.15s;
+  border: 1px solid transparent;
+  transition: all 0.15s;
 }
 
 .btn-edit {
   background: var(--accent-bg);
-  color: var(--accent);
+  color: var(--accent-light);
   border-color: var(--accent-border);
 }
 
-.btn-edit:hover { background: var(--accent); color: #fff; }
-
-.btn-delete {
-  background: transparent;
-  color: #ef4444;
-  border-color: #fca5a5;
+.btn-edit:hover {
+  background: var(--accent);
+  color: #fff;
+  box-shadow: 0 2px 10px rgba(124,106,247,0.4);
 }
 
-.btn-delete:hover { background: #ef4444; color: #fff; }
+.btn-delete {
+  background: rgba(239,68,68,0.1);
+  color: #fca5a5;
+  border-color: rgba(239,68,68,0.25);
+}
+
+.btn-delete:hover {
+  background: #ef4444;
+  color: #fff;
+  box-shadow: 0 2px 10px rgba(239,68,68,0.35);
+}

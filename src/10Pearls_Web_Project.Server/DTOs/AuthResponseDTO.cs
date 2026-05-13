@@ -6,5 +6,6 @@ namespace _10Pearls_Web_Project.Server.DTOs
         public string Id { get; set; } = string.Empty;
         public string Email { get; set; } = string.Empty;
         public string FullName { get; set; } = string.Empty;
+        public string Role { get; set; } = string.Empty;
     }
 }

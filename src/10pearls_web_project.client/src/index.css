@@ -1,53 +1,70 @@
+/* ─── Design Tokens ─────────────────────────────────────────── */
 :root {
-  --text: #6b6375;
-  --text-h: #08060d;
-  --bg: #fff;
-  --border: #e5e4e7;
-  --code-bg: #f4f3ec;
-  --accent: #aa3bff;
-  --accent-bg: rgba(170, 59, 255, 0.1);
-  --accent-border: rgba(170, 59, 255, 0.5);
-  --social-bg: rgba(244, 243, 236, 0.5);
-  --shadow:
-    rgba(0, 0, 0, 0.1) 0 10px 15px -3px, rgba(0, 0, 0, 0.05) 0 4px 6px -2px;
+  /* Gradient background — task-management purple/blue/teal */
+  --grad-1: #0f0c29;
+  --grad-2: #302b63;
+  --grad-3: #24243e;
 
-  --sans: system-ui, 'Segoe UI', Roboto, sans-serif;
-  --heading: system-ui, 'Segoe UI', Roboto, sans-serif;
-  --mono: ui-monospace, Consolas, monospace;
+  /* Glass surface */
+  --glass-bg:     rgba(255, 255, 255, 0.07);
+  --glass-border: rgba(255, 255, 255, 0.13);
+  --glass-hover:  rgba(255, 255, 255, 0.12);
+  --glass-input:  rgba(255, 255, 255, 0.06);
 
-  font: 18px/145% var(--sans);
-  letter-spacing: 0.18px;
-  color-scheme: light dark;
-  color: var(--text);
-  background: var(--bg);
+  /* Accent — vibrant purple */
+  --accent:        #7c6af7;
+  --accent-light:  #a78bfa;
+  --accent-bg:     rgba(124, 106, 247, 0.18);
+  --accent-border: rgba(124, 106, 247, 0.45);
+  --accent-glow:   0 0 24px rgba(124, 106, 247, 0.35);
+
+  /* Status colours */
+  --status-pending:    #f59e0b;
+  --status-inprogress: #3b82f6;
+  --status-completed:  #22c55e;
+
+  /* Priority colours */
+  --priority-low:    #22c55e;
+  --priority-medium: #f59e0b;
+  --priority-high:   #ef4444;
+
+  /* Text */
+  --text-primary:   rgba(255, 255, 255, 0.92);
+  --text-secondary: rgba(255, 255, 255, 0.55);
+  --text-muted:     rgba(255, 255, 255, 0.35);
+
+  /* Semantic aliases (used by existing components) */
+  --text:     var(--text-secondary);
+  --text-h:   var(--text-primary);
+  --bg:       var(--grad-1);
+  --border:   var(--glass-border);
+  --shadow:   0 8px 32px rgba(0, 0, 0, 0.45);
+  --code-bg:  rgba(255,255,255,0.08);
+  --social-bg: rgba(255,255,255,0.05);
+
+  /* Typography */
+  --sans:    'Inter', system-ui, 'Segoe UI', sans-serif;
+  --heading: 'Inter', system-ui, 'Segoe UI', sans-serif;
+  --mono:    ui-monospace, Consolas, monospace;
+
+  font: 16px/1.6 var(--sans);
+  letter-spacing: 0.01em;
+  color: var(--text-primary);
+  background: linear-gradient(135deg, var(--grad-1), var(--grad-2), var(--grad-3));
+  min-height: 100svh;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-
-  @media (max-width: 1024px) {
-    font-size: 16px;
-  }
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --text: #9ca3af;
-    --text-h: #f3f4f6;
-    --bg: #16171d;
-    --border: #2e303a;
-    --code-bg: #1f2028;
-    --accent: #c084fc;
-    --accent-bg: rgba(192, 132, 252, 0.15);
-    --accent-border: rgba(192, 132, 252, 0.5);
-    --social-bg: rgba(47, 48, 58, 0.5);
-    --shadow:
-      rgba(0, 0, 0, 0.4) 0 10px 15px -3px, rgba(0, 0, 0, 0.25) 0 4px 6px -2px;
-  }
+/* ─── Reset ─────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; }
 
-  #social .button-icon {
-    filter: invert(1) brightness(2);
-  }
+body {
+  margin: 0;
+  background: linear-gradient(135deg, var(--grad-1) 0%, var(--grad-2) 50%, var(--grad-3) 100%);
+  background-attachment: fixed;
+  min-height: 100svh;
 }
 
 #root {
@@ -58,53 +75,30 @@
   min-height: 100svh;
   display: flex;
   flex-direction: column;
-  box-sizing: border-box;
 }
 
-body {
-  margin: 0;
-}
-
-h1,
-h2 {
+/* ─── Typography ─────────────────────────────────────────────── */
+h1, h2, h3 {
   font-family: var(--heading);
-  font-weight: 500;
-  color: var(--text-h);
-}
-
-h1 {
-  font-size: 56px;
-  letter-spacing: -1.68px;
-  margin: 32px 0;
-  @media (max-width: 1024px) {
-    font-size: 36px;
-    margin: 20px 0;
-  }
-}
-h2 {
-  font-size: 24px;
-  line-height: 118%;
-  letter-spacing: -0.24px;
-  margin: 0 0 8px;
-  @media (max-width: 1024px) {
-    font-size: 20px;
-  }
-}
-p {
+  font-weight: 600;
+  color: var(--text-primary);
   margin: 0;
 }
 
-code,
-.counter {
-  font-family: var(--mono);
-  display: inline-flex;
-  border-radius: 4px;
-  color: var(--text-h);
-}
+h1 { font-size: clamp(1.5rem, 4vw, 2rem); letter-spacing: -0.02em; }
+h2 { font-size: clamp(1.1rem, 3vw, 1.4rem); letter-spacing: -0.01em; }
+h3 { font-size: 1rem; }
+p  { margin: 0; }
 
-code {
-  font-size: 15px;
-  line-height: 135%;
-  padding: 4px 8px;
-  background: var(--code-bg);
+/* ─── Scrollbar ──────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--glass-border); border-radius: 3px; }
+
+/* ─── Utility: glass surface ─────────────────────────────────── */
+.glass {
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
 }
