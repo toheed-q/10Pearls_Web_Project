@@ -24,8 +24,13 @@ try
               .ReadFrom.Services(services)
               .Enrich.FromLogContext());
 
-    // Controllers
-    builder.Services.AddControllers();
+    // Controllers — serialize enums as strings in JSON responses
+    builder.Services.AddControllers()
+        .AddJsonOptions(options =>
+        {
+            options.JsonSerializerOptions.Converters.Add(
+                new System.Text.Json.Serialization.JsonStringEnumConverter());
+        });
 
     // DB
     builder.Services.AddDbContext<ApplicationDBContext>(options =>
@@ -62,6 +67,7 @@ try
 
     builder.Services.AddScoped<JWTService>();
     builder.Services.AddScoped<IAuthService, AuthService>();
+    builder.Services.AddScoped<ITaskService, TaskService>();
 
     // Swagger
     builder.Services.AddEndpointsApiExplorer();
