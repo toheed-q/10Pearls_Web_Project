@@ -4,4 +4,5 @@
     <Deploy />
   </Project>
   <Project Path="10Pearls_Web_Project.Server/10Pearls_Web_Project.Server.csproj" />
+  <Project Path="10Pearls_Web_Project.Test/10Pearls_Web_Project.Test.csproj" Id="dc924c83-7667-491d-a3dd-f2882acbdcf2" />
 </Solution>

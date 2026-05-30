@@ -1,4 +1,5 @@
 using _10Pearls_Web_Project.Server.DBContext;
+using _10Pearls_Web_Project.Server.Hubs;
 using _10Pearls_Web_Project.Server.Middleware;
 using _10Pearls_Web_Project.Server.Models;
 using _10Pearls_Web_Project.Server.Services;
@@ -24,6 +25,16 @@ try
               .ReadFrom.Services(services)
               .Enrich.FromLogContext());
 
+    // CORS — allow the Vite dev server to connect (including WebSocket for SignalR)
+    builder.Services.AddCors(options =>
+    {
+        options.AddPolicy("SignalRPolicy", policy =>
+            policy.WithOrigins("https://localhost:7633", "http://localhost:7633")
+                  .AllowAnyHeader()
+                  .AllowAnyMethod()
+                  .AllowCredentials());
+    });
+
     // Controllers — serialize enums as strings in JSON responses
     builder.Services.AddControllers()
         .AddJsonOptions(options =>
@@ -41,7 +52,7 @@ try
         .AddEntityFrameworkStores<ApplicationDBContext>()
         .AddDefaultTokenProviders();
 
-    // JWT Authentication
+    // JWT — also accept token from SignalR query string (required for WebSocket transport)
     builder.Services.AddAuthentication(options =>
     {
         options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
@@ -61,6 +72,19 @@ try
                 Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]
                     ?? throw new InvalidOperationException("Jwt:Key is not configured")))
         };
+
+        // SignalR sends JWT via query string when using WebSocket transport
+        options.Events = new JwtBearerEvents
+        {
+            OnMessageReceived = ctx =>
+            {
+                var accessToken = ctx.Request.Query["access_token"];
+                var path = ctx.HttpContext.Request.Path;
+                if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/hubs"))
+                    ctx.Token = accessToken;
+                return System.Threading.Tasks.Task.CompletedTask;
+            }
+        };
     });
 
     builder.Services.AddAuthorization();
@@ -68,6 +92,9 @@ try
     builder.Services.AddScoped<JWTService>();
     builder.Services.AddScoped<IAuthService, AuthService>();
     builder.Services.AddScoped<ITaskService, TaskService>();
+
+    // SignalR
+    builder.Services.AddSignalR();
 
     // Swagger
     builder.Services.AddEndpointsApiExplorer();
@@ -85,6 +112,8 @@ try
 
     // Global exception handler — must be first
     app.UseMiddleware<ExceptionMiddleware>();
+
+    app.UseCors("SignalRPolicy");
 
     // Serilog HTTP request logging
     app.UseSerilogRequestLogging(options =>
@@ -104,6 +133,7 @@ try
     app.UseDefaultFiles();
     app.MapStaticAssets();
     app.MapControllers();
+    app.MapHub<TaskHub>("/hubs/tasks");
     app.MapFallbackToFile("/index.html");
 
     app.Run();
@@ -116,3 +146,5 @@ finally
 {
     Log.CloseAndFlush();
 }
+
+public partial class Program { }
