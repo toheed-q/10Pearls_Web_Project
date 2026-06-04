@@ -1,48 +1,53 @@
-﻿using _10Pearls_Web_Project.Server.Models;
+using _10Pearls_Web_Project.Server.Models;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
 
-public class JWTService
+namespace _10Pearls_Web_Project.Server.Services
 {
-    private readonly IConfiguration _config;
-
-    public JWTService(IConfiguration config)
+    public class JWTService
     {
-        _config = config;
-    }
+        private readonly IConfiguration _config;
 
-    public string GenerateToken(ApplicationUser user, IList<string> roles)
-    {
-        var jwtSettings = _config.GetSection("Jwt");
-
-        var key = new SymmetricSecurityKey(
-            Encoding.UTF8.GetBytes(jwtSettings["Key"] ?? throw new InvalidOperationException("Jwt:Key is not configured"))
-        );
-
-        var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
-
-        var claims = new List<Claim>
+        public JWTService(IConfiguration config)
         {
-            new Claim(ClaimTypes.NameIdentifier, user.Id),
-            new Claim(ClaimTypes.Email, user.Email),
-            new Claim("FullName", user.FullName ?? "")
-        };
-
-        foreach (var role in roles)
-        {
-            claims.Add(new Claim(ClaimTypes.Role, role));
+            _config = config;
         }
 
-        var token = new JwtSecurityToken(
-            issuer: jwtSettings["Issuer"],
-            audience: jwtSettings["Audience"],
-            claims: claims,
-            expires: DateTime.Now.AddMinutes(Convert.ToDouble(jwtSettings["DurationInMinutes"])),
-            signingCredentials: credentials
-        );
+        public string GenerateToken(ApplicationUser user, IList<string> roles)
+        {
+            var jwtSettings = _config.GetSection("Jwt");
 
-        return new JwtSecurityTokenHandler().WriteToken(token);
+            var key = new SymmetricSecurityKey(
+                Encoding.UTF8.GetBytes(
+                    jwtSettings["Key"] ?? throw new InvalidOperationException("Jwt:Key is not configured"))
+            );
+
+            var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+
+            var claims = new List<Claim>
+            {
+                // Standard identity claims — read by ClaimTypes.NameIdentifier, .Email, .Name
+                new Claim(ClaimTypes.NameIdentifier, user.Id),
+                new Claim(ClaimTypes.Email,          user.Email ?? string.Empty),
+                new Claim(ClaimTypes.Name,           user.FullName ?? string.Empty),
+            };
+
+            // Role claims — read by ClaimTypes.Role and User.IsInRole()
+            foreach (var role in roles)
+                claims.Add(new Claim(ClaimTypes.Role, role));
+
+            var token = new JwtSecurityToken(
+                issuer:            jwtSettings["Issuer"],
+                audience:          jwtSettings["Audience"],
+                claims:            claims,
+                expires:           DateTime.UtcNow.AddMinutes(
+                                       Convert.ToDouble(jwtSettings["DurationInMinutes"])),
+                signingCredentials: credentials
+            );
+
+            return new JwtSecurityTokenHandler().WriteToken(token);
+        }
     }
 }

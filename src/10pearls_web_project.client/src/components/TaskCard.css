@@ -90,7 +90,7 @@
   margin-top: 0.25rem;
 }
 
-.btn-edit, .btn-delete {
+.btn-edit, .btn-delete, .btn-view {
   flex: 1;
   padding: 0.4rem;
   border-radius: 8px;
@@ -99,6 +99,22 @@
   cursor: pointer;
   border: 1px solid transparent;
   transition: all 0.15s;
+  text-align: center;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-view {
+  background: rgba(255,255,255,0.05);
+  color: var(--text-secondary);
+  border-color: rgba(255,255,255,0.1);
+}
+
+.btn-view:hover {
+  background: rgba(255,255,255,0.1);
+  color: var(--text-primary);
 }
 
 .btn-edit {

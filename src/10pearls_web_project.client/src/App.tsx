@@ -3,6 +3,7 @@ import { useAuth } from './context/AuthContext';
 import { SignIn } from './pages/SignIn';
 import { SignUp } from './pages/SignUp';
 import { TaskDashboard } from './pages/TaskDashboard';
+import { TaskDetail } from './pages/TaskDetail';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { token } = useAuth();
@@ -15,6 +16,7 @@ function App() {
       <Route path="/signin" element={<SignIn />} />
       <Route path="/signup" element={<SignUp />} />
       <Route path="/" element={<ProtectedRoute><TaskDashboard /></ProtectedRoute>} />
+      <Route path="/tasks/:id" element={<ProtectedRoute><TaskDetail /></ProtectedRoute>} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );

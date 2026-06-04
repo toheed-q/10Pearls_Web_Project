@@ -41,25 +41,30 @@ export function TaskDashboard() {
   const [editingTask, setEditingTask] = useState<Task | undefined>();
 
   // ── SignalR real-time handlers ───────────────────────────────────────────
-  // useCallback ensures the same function reference is used for cleanup in useTaskHub
+  // SignalR is the SINGLE source of truth for state mutations.
+  // CRUD handlers do NOT touch state directly — they only call the API.
+  // SignalR events update state after the backend confirms the operation.
   const onTaskCreated = useCallback((task: Task) => {
+    // Normalize id to lowercase to guarantee consistent key comparison
+    const normalized = { ...task, id: task.id.toLowerCase() };
     setTasks(prev => {
-      // Deduplicate — own optimistic add already inserted it
-      if (prev.some(t => t.id === task.id)) return prev;
-      return [task, ...prev];
+      if (prev.some(t => t.id === normalized.id)) return prev; // already present
+      return [normalized, ...prev];
     });
   }, []);
 
   const onTaskUpdated = useCallback((task: Task) => {
-    setTasks(prev => prev.map(t => t.id === task.id ? task : t));
+    const normalized = { ...task, id: task.id.toLowerCase() };
+    setTasks(prev => prev.map(t => t.id === normalized.id ? normalized : t));
   }, []);
 
   const onTaskDeleted = useCallback((taskId: string) => {
-    setTasks(prev => prev.filter(t => t.id !== taskId));
+    setTasks(prev => prev.filter(t => t.id !== taskId.toLowerCase()));
   }, []);
 
   const onTaskStatusChanged = useCallback((task: Task) => {
-    setTasks(prev => prev.map(t => t.id === task.id ? task : t));
+    const normalized = { ...task, id: task.id.toLowerCase() };
+    setTasks(prev => prev.map(t => t.id === normalized.id ? normalized : t));
   }, []);
 
   const { connectionState } = useTaskHub({
@@ -79,7 +84,8 @@ export function TaskDashboard() {
     setLoading(true);
     try {
       const data = await taskService.getAll();
-      setTasks(data);
+      // Normalize all IDs to lowercase — prevents case mismatch with SignalR event IDs
+      setTasks(data.map(t => ({ ...t, id: t.id.toLowerCase() })));
     } catch {
       show('Failed to load tasks', 'error');
     } finally {
@@ -113,9 +119,9 @@ export function TaskDashboard() {
   async function handleCreate(dto: CreateTaskDTO) {
     setSaving(true);
     try {
-      const created = await taskService.create(dto);
-      // Optimistic insert — onTaskCreated will deduplicate if SignalR fires too
-      setTasks(prev => [created, ...prev]);
+      await taskService.create(dto);
+      // Do NOT insert into state here.
+      // The backend emits TaskCreated via SignalR which updates state exactly once.
       setShowForm(false);
       show('Task created');
     } finally {

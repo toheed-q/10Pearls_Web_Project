@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Serilog;
+using System.Security.Claims;
 using System.Text;
 
 // Bootstrap logger for startup errors only
@@ -62,15 +63,20 @@ try
     {
         options.TokenValidationParameters = new TokenValidationParameters
         {
-            ValidateIssuer = true,
-            ValidateAudience = true,
-            ValidateLifetime = true,
+            ValidateIssuer           = true,
+            ValidateAudience         = true,
+            ValidateLifetime         = true,
             ValidateIssuerSigningKey = true,
-            ValidIssuer = builder.Configuration["Jwt:Issuer"],
-            ValidAudience = builder.Configuration["Jwt:Audience"],
-            IssuerSigningKey = new SymmetricSecurityKey(
-                Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]
-                    ?? throw new InvalidOperationException("Jwt:Key is not configured")))
+            ValidIssuer              = builder.Configuration["Jwt:Issuer"],
+            ValidAudience            = builder.Configuration["Jwt:Audience"],
+            IssuerSigningKey         = new SymmetricSecurityKey(
+                Encoding.UTF8.GetBytes(
+                    builder.Configuration["Jwt:Key"] is { Length: > 0 } key
+                        ? key
+                        : throw new InvalidOperationException("Jwt:Key is not configured or empty"))),
+            // Explicitly map claim types so User.IsInRole() and ClaimTypes.Name work correctly
+            RoleClaimType = ClaimTypes.Role,
+            NameClaimType = ClaimTypes.NameIdentifier
         };
 
         // SignalR sends JWT via query string when using WebSocket transport
@@ -93,8 +99,14 @@ try
     builder.Services.AddScoped<IAuthService, AuthService>();
     builder.Services.AddScoped<ITaskService, TaskService>();
 
-    // SignalR
-    builder.Services.AddSignalR();
+    // SignalR — must have its own JsonStringEnumConverter because it uses
+    // a separate serializer pipeline from AddControllers()
+    builder.Services.AddSignalR()
+        .AddJsonProtocol(options =>
+        {
+            options.PayloadSerializerOptions.Converters.Add(
+                new System.Text.Json.Serialization.JsonStringEnumConverter());
+        });
 
     // Swagger
     builder.Services.AddEndpointsApiExplorer();
@@ -102,12 +114,10 @@ try
 
     var app = builder.Build();
 
-    // Seed roles on startup
+    // Seed roles and default admin on startup
     using (var scope = app.Services.CreateScope())
     {
-        var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
-        var seederLogger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
-        await RoleSeeder.SeedAsync(roleManager, seederLogger);
+        await IdentitySeeder.SeedAsync(scope.ServiceProvider);
     }
 
     // Global exception handler — must be first

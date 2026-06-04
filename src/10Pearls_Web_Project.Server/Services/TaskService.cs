@@ -43,6 +43,9 @@ namespace _10Pearls_Web_Project.Server.Services
             _db.Tasks.Add(task);
             await _db.SaveChangesAsync();
 
+            // Reload with navigation property so OwnerName is populated in the response
+            await _db.Entry(task).Reference(t => t.User).LoadAsync();
+
             _logger.LogInformation("Task {TaskId} created for User {UserId}", task.Id, userId);
 
             var result = MapToDTO(task);
@@ -56,8 +59,8 @@ namespace _10Pearls_Web_Project.Server.Services
         public async Task<List<TaskResponseDTO>> GetTasksAsync(string userId, bool isAdmin)
         {
             var query = isAdmin
-                ? _db.Tasks.AsQueryable()
-                : _db.Tasks.Where(t => t.UserId == userId);
+                ? _db.Tasks.Include(t => t.User).AsQueryable()
+                : _db.Tasks.Include(t => t.User).Where(t => t.UserId == userId);
 
             var tasks = await query
                 .OrderByDescending(t => t.CreatedAt)
@@ -74,8 +77,8 @@ namespace _10Pearls_Web_Project.Server.Services
         public async Task<TaskResponseDTO?> GetTaskByIdAsync(string userId, Guid taskId, bool isAdmin)
         {
             var task = isAdmin
-                ? await _db.Tasks.FirstOrDefaultAsync(t => t.Id == taskId)
-                : await _db.Tasks.FirstOrDefaultAsync(t => t.Id == taskId && t.UserId == userId);
+                ? await _db.Tasks.Include(t => t.User).FirstOrDefaultAsync(t => t.Id == taskId)
+                : await _db.Tasks.Include(t => t.User).FirstOrDefaultAsync(t => t.Id == taskId && t.UserId == userId);
 
             if (task == null)
             {
@@ -89,6 +92,7 @@ namespace _10Pearls_Web_Project.Server.Services
         public async Task<TaskResponseDTO?> UpdateTaskAsync(string userId, Guid taskId, UpdateTaskDTO dto)
         {
             var task = await _db.Tasks
+                .Include(t => t.User)
                 .FirstOrDefaultAsync(t => t.Id == taskId && t.UserId == userId);
 
             if (task == null)
@@ -124,6 +128,7 @@ namespace _10Pearls_Web_Project.Server.Services
         public async Task<bool> DeleteTaskAsync(string userId, Guid taskId)
         {
             var task = await _db.Tasks
+                .Include(t => t.User)
                 .FirstOrDefaultAsync(t => t.Id == taskId && t.UserId == userId);
 
             if (task == null)
@@ -185,7 +190,8 @@ namespace _10Pearls_Web_Project.Server.Services
             DueDate     = task.DueDate,
             CreatedAt   = task.CreatedAt,
             UpdatedAt   = task.UpdatedAt,
-            UserId      = task.UserId
+            UserId      = task.UserId,
+            OwnerName   = task.User?.FullName ?? task.User?.Email ?? task.UserId
         };
     }
 }

@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import type { Task } from '../types/task';
 import './TaskCard.css';
 
@@ -9,23 +10,30 @@ interface Props {
 }
 
 const STATUS_LABELS: Record<string, string> = {
-  Pending: 'Pending',
+  Pending:    'Pending',
   InProgress: 'In Progress',
-  Completed: 'Completed',
+  Completed:  'Completed',
 };
 
+// Safely converts any value to a lowercase string.
+// Guards against numeric enums arriving from the backend if serializer is misconfigured.
+const toStr = (v: unknown): string => String(v ?? '').toLowerCase();
+
 export function TaskCard({ task, onEdit, onDelete, showOwner = false }: Props) {
+  const status   = String(task.status   ?? '');
+  const priority = String(task.priority ?? '');
+
   const isOverdue =
-    task.status !== 'Completed' && new Date(task.dueDate) < new Date();
+    status !== 'Completed' && new Date(task.dueDate) < new Date();
 
   return (
-    <div className={`task-card ${task.status.toLowerCase()}`}>
+    <div className={`task-card ${toStr(status)}`}>
       <div className="task-card-header">
-        <span className={`badge priority-${task.priority.toLowerCase()}`}>
-          {task.priority}
+        <span className={`badge priority-${toStr(priority)}`}>
+          {priority}
         </span>
-        <span className={`badge status-${task.status.toLowerCase()}`}>
-          {STATUS_LABELS[task.status]}
+        <span className={`badge status-${toStr(status)}`}>
+          {STATUS_LABELS[status] ?? status}
         </span>
       </div>
 
@@ -45,6 +53,7 @@ export function TaskCard({ task, onEdit, onDelete, showOwner = false }: Props) {
       )}
 
       <div className="task-actions">
+        <Link className="btn-view" to={`/tasks/${task.id}`}>View</Link>
         <button className="btn-edit" onClick={() => onEdit(task)}>Edit</button>
         <button className="btn-delete" onClick={() => onDelete(task.id)}>Delete</button>
       </div>
