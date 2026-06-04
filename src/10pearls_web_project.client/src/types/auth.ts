@@ -37,3 +37,18 @@ export interface UserRoleChangedPayload {
   oldRole: string;
   newRole: string;
 }
+
+export interface ProfileTaskStats {
+  total: number;
+  completed: number;
+  pending: number;
+  inProgress: number;
+}
+
+export interface UserProfileDto {
+  id: string;
+  fullName: string;
+  email: string;
+  role: string;
+  taskStats: ProfileTaskStats;
+}

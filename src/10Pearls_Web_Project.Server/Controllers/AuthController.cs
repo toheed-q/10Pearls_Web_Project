@@ -14,14 +14,20 @@ namespace _10Pearls_Web_Project.Server.Controllers
     public class AuthController : ControllerBase
     {
         private readonly IAuthService _authService;
+        private readonly IProfileService _profileService;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly ILogger<AuthController> _logger;
 
-        public AuthController(IAuthService authService, UserManager<ApplicationUser> userManager, ILogger<AuthController> logger)
+        public AuthController(
+            IAuthService authService,
+            IProfileService profileService,
+            UserManager<ApplicationUser> userManager,
+            ILogger<AuthController> logger)
         {
-            _authService = authService;
-            _userManager = userManager;
-            _logger = logger;
+            _authService    = authService;
+            _profileService = profileService;
+            _userManager    = userManager;
+            _logger         = logger;
         }
 
         [HttpPost("register")]
@@ -96,6 +102,30 @@ namespace _10Pearls_Web_Project.Server.Controllers
                 Email = user.Email!,
                 FullName = user.FullName ?? string.Empty
             });
+        }
+
+        [Authorize]
+        [HttpGet("me")]
+        public async Task<IActionResult> Me()
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (userId == null) return Unauthorized();
+
+            var profile = await _profileService.GetProfileAsync(userId);
+            return profile == null ? NotFound(new { message = "User not found" }) : Ok(profile);
+        }
+
+        [Authorize]
+        [HttpPut("me")]
+        public async Task<IActionResult> UpdateMe([FromBody] UpdateProfileRequest request)
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (userId == null) return Unauthorized();
+
+            var (success, error) = await _profileService.UpdateProfileAsync(userId, request);
+            return success
+                ? Ok(new { message = "Profile updated successfully" })
+                : BadRequest(new { message = error });
         }
     }
 }

@@ -49,7 +49,7 @@ export function TaskCard({ task, onEdit, onDelete, showOwner = false }: Props) {
       </p>
 
       {showOwner && (
-        <p className="task-owner">Owner: {task.userId.slice(0, 8)}…</p>
+        <p className="task-owner">Owner: {task.ownerName || task.userId.slice(0, 8) + '…'}</p>
       )}
 
       <div className="task-actions">

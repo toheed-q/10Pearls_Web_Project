@@ -7,8 +7,8 @@ namespace _10Pearls_Web_Project.Server.Services
         Task<TaskResponseDTO> CreateTaskAsync(string userId, CreateTaskDTO dto);
         Task<List<TaskResponseDTO>> GetTasksAsync(string userId, bool isAdmin);
         Task<TaskResponseDTO?> GetTaskByIdAsync(string userId, Guid taskId, bool isAdmin);
-        Task<TaskResponseDTO?> UpdateTaskAsync(string userId, Guid taskId, UpdateTaskDTO dto);
-        Task<bool> DeleteTaskAsync(string userId, Guid taskId);
+        Task<TaskResponseDTO?> UpdateTaskAsync(string userId, Guid taskId, UpdateTaskDTO dto, bool isAdmin);
+        Task<bool> DeleteTaskAsync(string userId, Guid taskId, bool isAdmin);
         Task<TaskStatsDTO> GetStatsAsync(string userId, bool isAdmin);
     }
 }

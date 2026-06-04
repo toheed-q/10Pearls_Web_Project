@@ -102,6 +102,7 @@ try
     builder.Services.AddScoped<IAuthService, AuthService>();
     builder.Services.AddScoped<ITaskService, TaskService>();
     builder.Services.AddScoped<IAdminService, AdminService>();
+    builder.Services.AddScoped<IProfileService, ProfileService>();
 
     // SignalR — must have its own JsonStringEnumConverter because it uses
     // a separate serializer pipeline from AddControllers()

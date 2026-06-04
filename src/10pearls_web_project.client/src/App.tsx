@@ -5,6 +5,7 @@ import { SignUp } from './pages/SignUp';
 import { TaskDashboard } from './pages/TaskDashboard';
 import { TaskDetail } from './pages/TaskDetail';
 import { AdminDashboard } from './pages/AdminDashboard';
+import { Profile } from './pages/Profile';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { token } = useAuth();
@@ -26,6 +27,7 @@ function App() {
       <Route path="/" element={<ProtectedRoute><TaskDashboard /></ProtectedRoute>} />
       <Route path="/tasks/:id" element={<ProtectedRoute><TaskDetail /></ProtectedRoute>} />
       <Route path="/admin" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
+      <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );

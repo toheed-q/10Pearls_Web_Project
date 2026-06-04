@@ -209,6 +209,12 @@ export function TaskDashboard() {
             onClick={() => { setEditingTask(undefined); setShowForm(true); }}>
             + New Task
           </button>
+          <button className="user-avatar-btn" onClick={() => navigate('/profile')} title="My Profile">
+            <span className="user-avatar-icon">
+              {user?.fullName?.charAt(0).toUpperCase() ?? '?'}
+            </span>
+            <span className="user-avatar-name">{user?.fullName}</span>
+          </button>
           <button className="btn-logout" onClick={handleLogout}>Logout</button>
         </div>
       </header>

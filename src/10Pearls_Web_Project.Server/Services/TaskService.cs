@@ -89,11 +89,11 @@ namespace _10Pearls_Web_Project.Server.Services
             return MapToDTO(task);
         }
 
-        public async Task<TaskResponseDTO?> UpdateTaskAsync(string userId, Guid taskId, UpdateTaskDTO dto)
+        public async Task<TaskResponseDTO?> UpdateTaskAsync(string userId, Guid taskId, UpdateTaskDTO dto, bool isAdmin)
         {
             var task = await _db.Tasks
                 .Include(t => t.User)
-                .FirstOrDefaultAsync(t => t.Id == taskId && t.UserId == userId);
+                .FirstOrDefaultAsync(t => t.Id == taskId && (isAdmin || t.UserId == userId));
 
             if (task == null)
             {
@@ -120,16 +120,18 @@ namespace _10Pearls_Web_Project.Server.Services
                 ? TaskStatusChanged
                 : TaskUpdated;
 
-            await SendToUserAndAdmins(userId, eventName, result);
+            // Notify the task owner — use task.UserId (not caller's userId) so the
+            // owner always receives the event even when an admin made the change
+            await SendToUserAndAdmins(task.UserId, eventName, result);
 
             return result;
         }
 
-        public async Task<bool> DeleteTaskAsync(string userId, Guid taskId)
+        public async Task<bool> DeleteTaskAsync(string userId, Guid taskId, bool isAdmin)
         {
             var task = await _db.Tasks
                 .Include(t => t.User)
-                .FirstOrDefaultAsync(t => t.Id == taskId && t.UserId == userId);
+                .FirstOrDefaultAsync(t => t.Id == taskId && (isAdmin || t.UserId == userId));
 
             if (task == null)
             {
@@ -143,7 +145,8 @@ namespace _10Pearls_Web_Project.Server.Services
             _logger.LogInformation("Task {TaskId} deleted by User {UserId}", taskId, userId);
 
             // Send taskId (as string) so clients can remove it from state by id
-            await SendToUserAndAdmins(userId, TaskDeleted, taskId.ToString());
+            // Notify the task owner regardless of who deleted it
+            await SendToUserAndAdmins(task.UserId, TaskDeleted, taskId.ToString());
 
             return true;
         }

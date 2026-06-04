@@ -11,6 +11,7 @@ export interface Task {
   createdAt: string;
   updatedAt: string;
   userId: string;
+  ownerName?: string;
 }
 
 export interface CreateTaskDTO {

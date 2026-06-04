@@ -79,7 +79,7 @@ namespace _10Pearls_Web_Project.Server.Controllers
 
             _logger.LogInformation("Update task {TaskId} request from User {UserId}", id, userId);
 
-            var task = await _taskService.UpdateTaskAsync(userId, id, dto);
+            var task = await _taskService.UpdateTaskAsync(userId, id, dto, IsAdmin);
             return task == null ? NotFound(new { message = "Task not found" }) : Ok(task);
         }
 
@@ -92,7 +92,7 @@ namespace _10Pearls_Web_Project.Server.Controllers
 
             _logger.LogInformation("Delete task {TaskId} request from User {UserId}", id, userId);
 
-            var deleted = await _taskService.DeleteTaskAsync(userId, id);
+            var deleted = await _taskService.DeleteTaskAsync(userId, id, IsAdmin);
             return deleted ? NoContent() : NotFound(new { message = "Task not found" });
         }
     }
