@@ -28,16 +28,14 @@ namespace _10Pearls_Web_Project.Server.Hubs
                 return;
             }
 
-            // Every authenticated user joins their personal group
             await Groups.AddToGroupAsync(Context.ConnectionId, HubEvents.UserGroup(userId));
 
-            // Admins additionally join the admin broadcast group
-            if (role == "Admin")
+            if (role == Roles.Admin)
                 await Groups.AddToGroupAsync(Context.ConnectionId, HubEvents.AdminGroup);
 
             _logger.LogInformation(
                 "SignalR connected — ConnectionId: {ConnectionId} | UserId: {UserId} | Role: {Role}",
-                Context.ConnectionId, userId, role ?? "User");
+                Context.ConnectionId, userId, role ?? Roles.User);
 
             await base.OnConnectedAsync();
         }

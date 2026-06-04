@@ -1,3 +1,4 @@
+using _10Pearls_Web_Project.Server.Enums;
 using _10Pearls_Web_Project.Server.Models;
 using Microsoft.AspNetCore.Identity;
 
@@ -13,7 +14,7 @@ namespace _10Pearls_Web_Project.Server.Services
             var logger      = services.GetRequiredService<ILogger<Program>>();
 
             // ── 1. Seed roles ────────────────────────────────────────────
-            string[] roles = ["Admin", "User"];
+            string[] roles = [Roles.Admin, Roles.User];
 
             foreach (var role in roles)
             {
@@ -46,7 +47,7 @@ namespace _10Pearls_Web_Project.Server.Services
 
                 if (result.Succeeded)
                 {
-                    await userManager.AddToRoleAsync(adminUser, "Admin");
+                    await userManager.AddToRoleAsync(adminUser, Roles.Admin);
                     logger.LogInformation("Default admin user created: {Email}", adminEmail);
                 }
                 else
@@ -55,10 +56,10 @@ namespace _10Pearls_Web_Project.Server.Services
                     logger.LogWarning("Failed to create default admin: {Errors}", errors);
                 }
             }
-            else if (!await userManager.IsInRoleAsync(existing, "Admin"))
+            else if (!await userManager.IsInRoleAsync(existing, Roles.Admin))
             {
                 // Existing user found but missing Admin role — fix it
-                await userManager.AddToRoleAsync(existing, "Admin");
+                await userManager.AddToRoleAsync(existing, Roles.Admin);
                 logger.LogInformation("Admin role assigned to existing user: {Email}", adminEmail);
             }
         }

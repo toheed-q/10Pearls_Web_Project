@@ -200,6 +200,11 @@ export function TaskDashboard() {
           </p>
         </div>
         <div className="header-actions">
+          {isAdmin && (
+            <button className="btn-primary" onClick={() => navigate('/admin')}>
+              Manage Users
+            </button>
+          )}
           <button className="btn-primary"
             onClick={() => { setEditingTask(undefined); setShowForm(true); }}>
             + New Task

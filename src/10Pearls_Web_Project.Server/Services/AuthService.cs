@@ -1,4 +1,5 @@
 using _10Pearls_Web_Project.Server.DTOs;
+using _10Pearls_Web_Project.Server.Enums;
 using _10Pearls_Web_Project.Server.Models;
 using Microsoft.AspNetCore.Identity;
 
@@ -50,7 +51,7 @@ namespace _10Pearls_Web_Project.Server.Services
             }
 
             // Every new user gets the User role by default
-            await _userManager.AddToRoleAsync(user, "User");
+            await _userManager.AddToRoleAsync(user, Roles.User);
 
             _logger.LogInformation("User {UserId} registered with role 'User'", user.Id);
             return (true, null);
@@ -62,11 +63,11 @@ namespace _10Pearls_Web_Project.Server.Services
             if (user == null)
                 return (false, $"No user found with email '{email}'");
 
-            if (await _userManager.IsInRoleAsync(user, "Admin"))
+            if (await _userManager.IsInRoleAsync(user, Roles.Admin))
                 return (false, "User is already an Admin");
 
-            await _userManager.RemoveFromRoleAsync(user, "User");
-            await _userManager.AddToRoleAsync(user, "Admin");
+            await _userManager.RemoveFromRoleAsync(user, Roles.User);
+            await _userManager.AddToRoleAsync(user, Roles.Admin);
 
             _logger.LogInformation("User {UserId} promoted to Admin", user.Id);
             return (true, null);
@@ -93,7 +94,7 @@ namespace _10Pearls_Web_Project.Server.Services
             var roles = await _userManager.GetRolesAsync(user);
 
             // Primary role: Admin takes precedence, fallback to User
-            var primaryRole = roles.Contains("Admin") ? "Admin" : "User";
+            var primaryRole = roles.Contains(Roles.Admin) ? Roles.Admin : Roles.User;
 
             var token = _jwtService.GenerateToken(user, roles);
 

@@ -1,4 +1,5 @@
 using _10Pearls_Web_Project.Server.DTOs;
+using _10Pearls_Web_Project.Server.Enums;
 using _10Pearls_Web_Project.Server.Models;
 using _10Pearls_Web_Project.Server.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -59,7 +60,7 @@ namespace _10Pearls_Web_Project.Server.Controllers
             return Ok(data);
         }
 
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = Roles.Admin)]
         [HttpPost("promote")]
         [Consumes("application/json")]
         public async Task<IActionResult> PromoteToAdmin([FromBody] PromoteDTO dto)

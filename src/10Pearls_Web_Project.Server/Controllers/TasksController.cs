@@ -1,4 +1,5 @@
 using _10Pearls_Web_Project.Server.DTOs;
+using _10Pearls_Web_Project.Server.Enums;
 using _10Pearls_Web_Project.Server.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -21,7 +22,7 @@ namespace _10Pearls_Web_Project.Server.Controllers
         }
 
         private string? CurrentUserId => User.FindFirstValue(ClaimTypes.NameIdentifier);
-        private bool IsAdmin => User.IsInRole("Admin");
+        private bool IsAdmin => User.IsInRole(Roles.Admin);
 
         // GET /api/tasks/stats
         [HttpGet("stats")]

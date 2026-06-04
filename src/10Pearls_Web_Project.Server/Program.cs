@@ -53,11 +53,14 @@ try
         .AddEntityFrameworkStores<ApplicationDBContext>()
         .AddDefaultTokenProviders();
 
-    // JWT — also accept token from SignalR query string (required for WebSocket transport)
+    // JWT — AddIdentity above overwrites the default schemes with cookies.
+    // Re-declare AddAuthentication here to explicitly restore JWT as the default.
+    // AddJwtBearer is additive and does not conflict.
     builder.Services.AddAuthentication(options =>
     {
         options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-        options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+        options.DefaultChallengeScheme    = JwtBearerDefaults.AuthenticationScheme;
+        options.DefaultScheme             = JwtBearerDefaults.AuthenticationScheme;
     })
     .AddJwtBearer(options =>
     {
@@ -98,6 +101,7 @@ try
     builder.Services.AddScoped<JWTService>();
     builder.Services.AddScoped<IAuthService, AuthService>();
     builder.Services.AddScoped<ITaskService, TaskService>();
+    builder.Services.AddScoped<IAdminService, AdminService>();
 
     // SignalR — must have its own JsonStringEnumConverter because it uses
     // a separate serializer pipeline from AddControllers()

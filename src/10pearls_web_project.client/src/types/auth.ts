@@ -23,3 +23,17 @@ export interface AuthUser {
   fullName: string;
   role: string;
 }
+
+export interface UserSummary {
+  id: string;
+  fullName: string;
+  email: string;
+  role: string;
+  taskCount: number;
+}
+
+export interface UserRoleChangedPayload {
+  userId: string;
+  oldRole: string;
+  newRole: string;
+}

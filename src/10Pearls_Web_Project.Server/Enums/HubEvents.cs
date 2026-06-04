@@ -12,6 +12,7 @@ namespace _10Pearls_Web_Project.Server.Enums
         public const string TaskUpdated       = "TaskUpdated";
         public const string TaskDeleted       = "TaskDeleted";
         public const string TaskStatusChanged = "TaskStatusChanged";
+        public const string UserRoleChanged    = "UserRoleChanged";
 
         // ── Group names ────────────────────────────────────────────────────
         // Admin group — all admin connections join this on connect

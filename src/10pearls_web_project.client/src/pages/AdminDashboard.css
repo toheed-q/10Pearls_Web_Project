@@ -1,0 +1,125 @@
+/* AdminDashboard — reuses all tokens from index.css, no new design system */
+
+.admin-table-wrap {
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1px solid var(--glass-border);
+}
+
+.admin-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+.admin-table th {
+  padding: 0.75rem 1.25rem;
+  text-align: left;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-secondary);
+  border-bottom: 1px solid var(--glass-border);
+  background: rgba(255,255,255,0.03);
+}
+
+.admin-table td {
+  padding: 0.9rem 1.25rem;
+  color: var(--text-primary);
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+
+.admin-table tbody tr:last-child td { border-bottom: none; }
+
+.admin-table tbody tr:hover { background: rgba(255,255,255,0.03); }
+
+.muted { color: var(--text-secondary); }
+
+/* ── Role badges ── */
+.role-badge {
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 999px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.role-admin {
+  background: linear-gradient(135deg, #7c6af7, #a78bfa);
+  color: #fff;
+  box-shadow: 0 2px 10px rgba(124,106,247,0.4);
+}
+
+.role-user {
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.15);
+  color: var(--text-secondary);
+}
+
+/* ── Action buttons ── */
+.btn-action {
+  padding: 0.3rem 0.9rem;
+  border-radius: 8px;
+  border: none;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.btn-action:disabled { opacity: 0.35; cursor: not-allowed; }
+
+.btn-promote {
+  background: linear-gradient(135deg, #7c6af7, #a78bfa);
+  color: #fff;
+  box-shadow: 0 2px 10px rgba(124,106,247,0.3);
+}
+
+.btn-promote:hover:not(:disabled) { opacity: 0.85; }
+
+.btn-demote {
+  background: rgba(239,68,68,0.15);
+  border: 1px solid rgba(239,68,68,0.3);
+  color: #fca5a5;
+}
+
+.btn-demote:hover:not(:disabled) {
+  background: rgba(239,68,68,0.25);
+}
+
+/* ── Confirmation modal ── */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.55);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+
+.modal {
+  padding: 2rem;
+  border-radius: 16px;
+  min-width: 300px;
+  max-width: 420px;
+  width: 90%;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.modal-msg {
+  font-size: 1rem;
+  color: var(--text-primary);
+  text-align: center;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: center;
+}

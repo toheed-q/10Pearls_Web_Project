@@ -7,6 +7,7 @@ export const HubEvents = {
   TaskUpdated:       'TaskUpdated',
   TaskDeleted:       'TaskDeleted',
   TaskStatusChanged: 'TaskStatusChanged',
+  UserRoleChanged:   'UserRoleChanged',
 } as const;
 
 export type HubEventName = typeof HubEvents[keyof typeof HubEvents];
