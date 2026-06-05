@@ -9,6 +9,7 @@ import { TaskForm } from '../components/TaskForm';
 import { ToastContainer } from '../components/ToastContainer';
 import { useToast } from '../hooks/useToast';
 import { useNavigate } from 'react-router-dom';
+import { ThemeToggle } from '../components/ThemeToggle';
 import './TaskDashboard.css';
 
 const PAGE_SIZE = 6;
@@ -210,6 +211,7 @@ export function TaskDashboard() {
             </span>
             <span className="user-avatar-name">{user?.fullName}</span>
           </button>
+          <ThemeToggle />
           <button className="btn-logout" onClick={handleLogout}>Logout</button>
         </div>
       </header>

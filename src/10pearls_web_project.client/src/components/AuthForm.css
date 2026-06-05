@@ -9,6 +9,13 @@
   overflow: hidden;
 }
 
+.auth-theme-btn {
+  position: absolute;
+  top: 1.25rem;
+  right: 1.25rem;
+  z-index: 2;
+}
+
 /* Animated orbs — override the body orbs with stronger local ones */
 .auth-wrapper::before,
 .auth-wrapper::after {

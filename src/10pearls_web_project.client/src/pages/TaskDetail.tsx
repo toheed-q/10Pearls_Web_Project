@@ -7,6 +7,7 @@ import { TaskForm } from '../components/TaskForm';
 import { ToastContainer } from '../components/ToastContainer';
 import { useToast } from '../hooks/useToast';
 import type { AppTaskStatus, CreateTaskDTO, Task, UpdateTaskDTO } from '../types/task';
+import { ThemeToggle } from '../components/ThemeToggle';
 import './TaskDetail.css';
 
 const STATUS_LABELS: Record<AppTaskStatus, string> = {
@@ -119,12 +120,15 @@ export function TaskDetail() {
   return (
     <div className="td-page">
 
-      <Link to="/" className="td-back-link">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="14" height="14">
-          <polyline points="15 18 9 12 15 6"/>
-        </svg>
-        Back to Dashboard
-      </Link>
+      <div className="td-top-row">
+        <Link to="/" className="td-back-link">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="14" height="14">
+            <polyline points="15 18 9 12 15 6"/>
+          </svg>
+          Back to Dashboard
+        </Link>
+        <ThemeToggle />
+      </div>
 
       <div className="td-card">
 

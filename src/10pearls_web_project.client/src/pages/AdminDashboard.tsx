@@ -8,6 +8,7 @@ import type { UserSummary, UserRoleChangedPayload } from '../types/auth';
 import { ToastContainer } from '../components/ToastContainer';
 import { useToast } from '../hooks/useToast';
 import * as signalR from '@microsoft/signalr';
+import { ThemeToggle } from '../components/ThemeToggle';
 import './AdminDashboard.css';
 
 export function AdminDashboard() {
@@ -88,6 +89,7 @@ export function AdminDashboard() {
             </svg>
             Tasks
           </button>
+          <ThemeToggle />
           <button className="btn-logout" onClick={handleLogout}>Logout</button>
         </div>
       </header>

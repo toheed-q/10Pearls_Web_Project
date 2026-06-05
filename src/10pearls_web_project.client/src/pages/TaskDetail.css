@@ -5,7 +5,14 @@
   margin: 0 auto;
 }
 
-/* ── Back link ─────────────────────────────────────────────── */
+/* ── Top row: back link + theme toggle ─────────────────────── */
+.td-top-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.5rem;
+}
+
 .td-back-link {
   display: inline-flex;
   align-items: center;
@@ -14,7 +21,6 @@
   font-weight: 500;
   color: var(--text-secondary);
   text-decoration: none;
-  margin-bottom: 1.5rem;
   transition: color 0.15s;
 }
 

@@ -9,6 +9,7 @@ import type { Task } from '../types/task';
 import { ToastContainer } from '../components/ToastContainer';
 import { useToast } from '../hooks/useToast';
 import * as signalR from '@microsoft/signalr';
+import { ThemeToggle } from '../components/ThemeToggle';
 import './Profile.css';
 
 export function Profile() {
@@ -132,6 +133,7 @@ export function Profile() {
             </svg>
             Dashboard
           </button>
+          <ThemeToggle />
           <button className="btn-logout" onClick={handleLogout}>Logout</button>
         </div>
       </header>

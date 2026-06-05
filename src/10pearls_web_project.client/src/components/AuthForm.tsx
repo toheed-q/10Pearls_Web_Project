@@ -1,4 +1,5 @@
 import type { FormEvent, ReactNode } from 'react';
+import { ThemeToggle } from './ThemeToggle';
 import './AuthForm.css';
 
 interface Props {
@@ -13,6 +14,7 @@ interface Props {
 export function AuthForm({ title, error, loading, onSubmit, children, footer }: Props) {
   return (
     <div className="auth-wrapper">
+      <div className="auth-theme-btn"><ThemeToggle /></div>
       <div className="auth-card">
         <div className="auth-brand">
           <div className="auth-brand-icon">
