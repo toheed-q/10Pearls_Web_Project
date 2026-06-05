@@ -194,7 +194,8 @@ namespace _10Pearls_Web_Project.Server.Services
             CreatedAt   = task.CreatedAt,
             UpdatedAt   = task.UpdatedAt,
             UserId      = task.UserId,
-            OwnerName   = task.User?.FullName ?? task.User?.Email ?? task.UserId
+            OwnerName   = task.User?.FullName ?? task.User?.Email ?? task.UserId,
+            OwnerEmail  = task.User?.Email    ?? string.Empty
         };
     }
 }

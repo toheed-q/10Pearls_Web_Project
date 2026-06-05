@@ -26,6 +26,7 @@ namespace _10Pearls_Web_Project.Server.DTOs
         public string UserId { get; set; } = string.Empty;
 
         // Full name of the task owner — populated from AspNetUsers join
-        public string OwnerName { get; set; } = string.Empty;
+        public string OwnerName  { get; set; } = string.Empty;
+        public string OwnerEmail { get; set; } = string.Empty;
     }
 }

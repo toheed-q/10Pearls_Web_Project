@@ -13,16 +13,32 @@ namespace _10Pearls_Web_Project.Server.Controllers
     public class TasksController : ControllerBase
     {
         private readonly ITaskService _taskService;
+        private readonly ITaskExportService _exportService;
         private readonly ILogger<TasksController> _logger;
 
-        public TasksController(ITaskService taskService, ILogger<TasksController> logger)
+        public TasksController(
+            ITaskService taskService,
+            ITaskExportService exportService,
+            ILogger<TasksController> logger)
         {
-            _taskService = taskService;
-            _logger = logger;
+            _taskService   = taskService;
+            _exportService = exportService;
+            _logger        = logger;
         }
 
         private string? CurrentUserId => User.FindFirstValue(ClaimTypes.NameIdentifier);
         private bool IsAdmin => User.IsInRole(Roles.Admin);
+
+        // GET /api/tasks/export/csv
+        [HttpGet("export/csv")]
+        public async Task<IActionResult> ExportCsv()
+        {
+            var userId = CurrentUserId;
+            if (userId == null) return Unauthorized();
+
+            var (content, fileName) = await _exportService.ExportCsvAsync(userId, IsAdmin);
+            return File(content, "text/csv", fileName);
+        }
 
         // GET /api/tasks/stats
         [HttpGet("stats")]

@@ -32,6 +32,7 @@ export function TaskDashboard() {
   const [tasks, setTasks]     = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving]   = useState(false);
+  const [exporting, setExporting] = useState(false);
 
   const [statusFilter, setStatusFilter] = useState<AppTaskStatus | 'All'>('All');
   const [sortOrder, setSortOrder]       = useState<SortOrder>('asc');
@@ -172,6 +173,18 @@ export function TaskDashboard() {
     }
   }
 
+  async function handleExportCsv() {
+    setExporting(true);
+    try {
+      await taskService.exportCsv();
+      show('CSV exported successfully');
+    } catch {
+      show('Failed to export tasks', 'error');
+    } finally {
+      setExporting(false);
+    }
+  }
+
   function handleLogout() {
     logout();
     navigate('/signin');
@@ -287,6 +300,13 @@ export function TaskDashboard() {
         <span className="task-count">
           {filtered.length} task{filtered.length !== 1 ? 's' : ''}
         </span>
+        <button
+          className="btn-export"
+          onClick={handleExportCsv}
+          disabled={exporting}
+        >
+          {exporting ? 'Exporting…' : '↓ Export CSV'}
+        </button>
       </div>
 
       {/* ── Task list ── */}

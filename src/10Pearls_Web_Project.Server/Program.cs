@@ -101,6 +101,7 @@ try
     builder.Services.AddScoped<JWTService>();
     builder.Services.AddScoped<IAuthService, AuthService>();
     builder.Services.AddScoped<ITaskService, TaskService>();
+    builder.Services.AddScoped<ITaskExportService, TaskExportService>();
     builder.Services.AddScoped<IAdminService, AdminService>();
     builder.Services.AddScoped<IProfileService, ProfileService>();
 
