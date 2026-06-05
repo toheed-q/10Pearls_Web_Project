@@ -35,6 +35,7 @@ export function TaskDashboard() {
 
   const [statusFilter, setStatusFilter] = useState<AppTaskStatus | 'All'>('All');
   const [sortOrder, setSortOrder]       = useState<SortOrder>('asc');
+  const [search, setSearch]             = useState('');
   const [page, setPage]                 = useState(1);
 
   const [showForm, setShowForm]       = useState(false);
@@ -95,9 +96,14 @@ export function TaskDashboard() {
 
   // ── Filter / sort / paginate ─────────────────────────────────────────────
   const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+
     let result = statusFilter === 'All'
       ? tasks
       : tasks.filter(t => t.status === statusFilter);
+
+    if (q)
+      result = result.filter(t => t.title.toLowerCase().includes(q));
 
     result = [...result].sort((a, b) => {
       const diff = new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
@@ -105,13 +111,18 @@ export function TaskDashboard() {
     });
 
     return result;
-  }, [tasks, statusFilter, sortOrder]);
+  }, [tasks, statusFilter, sortOrder, search]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const paginated  = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   function handleFilterChange(value: AppTaskStatus | 'All') {
     setStatusFilter(value);
+    setPage(1);
+  }
+
+  function handleSearch(value: string) {
+    setSearch(value);
     setPage(1);
   }
 
@@ -241,6 +252,20 @@ export function TaskDashboard() {
 
       {/* ── Toolbar ── */}
       <div className="toolbar">
+        {/* Search */}
+        <div className="search-box">
+          <span className="search-icon">&#9906;</span>
+          <input
+            className="search-input"
+            type="text"
+            placeholder="Search tasks…"
+            value={search}
+            onChange={e => handleSearch(e.target.value)}
+          />
+          {search && (
+            <button className="search-clear" onClick={() => handleSearch('')}>✕</button>
+          )}
+        </div>
         <div className="filter-group">
           {(['All', 'Pending', 'InProgress', 'Completed'] as const).map(s => (
             <button
