@@ -27,7 +27,7 @@ export function TaskCard({ task, onEdit, onDelete, showOwner = false }: Props) {
     status !== 'Completed' && new Date(task.dueDate) < new Date();
 
   return (
-    <div className={`task-card ${toStr(status)}`}>
+    <div className={`task-card ${toStr(status)} ${toStr(priority)}`}>
       <div className="task-card-header">
         <span className={`badge priority-${toStr(priority)}`}>
           {priority}
