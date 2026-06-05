@@ -1,4 +1,4 @@
-# Task Management System - Enterprise Full-Stack Application
+# Task Management System -  Full-Stack Application
 
 ## 📋 Table of Contents
 1. [Project Overview](#project-overview)
