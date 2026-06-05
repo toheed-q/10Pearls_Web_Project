@@ -198,3 +198,15 @@
 @media (max-width: 768px) {
   .admin-table td, .admin-table th { padding: 0.75rem 1rem; }
 }
+
+@media (max-width: 600px) {
+  .admin-table td, .admin-table th { padding: 0.65rem 0.85rem; font-size: 0.82rem; }
+  .user-cell-avatar { width: 28px; height: 28px; font-size: 0.75rem; border-radius: 7px; }
+  .btn-action { padding: 0.3rem 0.8rem; min-height: 36px; }
+
+  /* Make the modal stack better */
+  .modal { padding: 1.5rem; }
+  .modal-actions { flex-direction: column; }
+  .modal-actions .btn-primary,
+  .modal-actions .btn-logout { min-height: 46px; justify-content: center; }
+}

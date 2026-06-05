@@ -257,3 +257,16 @@
 }
 
 .auth-footer a:hover { color: #fff; }
+
+/* ─── Responsive ─────────────────────────────────────────────── */
+@media (max-width: 480px) {
+  .auth-wrapper { padding: 1rem; align-items: flex-start; padding-top: 2rem; }
+  .auth-card    { padding: 2rem 1.5rem; border-radius: 18px; }
+  .auth-btn     { padding: 0.8rem; min-height: 48px; }
+  .auth-input-wrap input { font-size: 1rem; }   /* prevents zoom on iOS */
+}
+
+@media (max-width: 360px) {
+  .auth-wrapper { padding: 0.75rem; }
+  .auth-card    { padding: 1.75rem 1.25rem; }
+}

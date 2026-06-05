@@ -119,6 +119,7 @@
 
 .btn-edit, .btn-delete, .btn-view {
   flex: 1;
+  min-height: 38px;          /* touch-friendly */
   padding: 0.42rem 0.5rem;
   border-radius: 9px;
   font-size: 0.76rem;

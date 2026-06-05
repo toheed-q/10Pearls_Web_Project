@@ -78,6 +78,8 @@ body {
   min-height: 100svh;
   position: relative;
   overflow-x: hidden;
+  /* prevent zooming on input focus on iOS */
+  -webkit-text-size-adjust: 100%;
 }
 
 /* ── Ambient animated orbs (all pages) ───────────────────────── */
