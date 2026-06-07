@@ -1,13 +1,16 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using _10Pearls_Web_Project.Server.DBContext;
 using _10Pearls_Web_Project.Server.DTOs;
 using _10Pearls_Web_Project.Server.Enums;
+using _10Pearls_Web_Project.Server.Hubs;
 using _10Pearls_Web_Project.Server.Models;
 using _10Pearls_Web_Project.Server.Services;
 using FluentAssertions;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -16,8 +19,10 @@ using Xunit;
 namespace _10Pearls_Web_Project.Test.Services
 {
     /// <summary>
-    /// Unit tests for verifying the functionality of TaskService.
-    /// Uses Entity Framework Core In-Memory database for isolated testing.
+    /// Unit tests for TaskService using EF Core InMemory database.
+    /// Each test runs in an isolated database (new Guid name) so tests never interfere.
+    /// ApplicationUser rows must be seeded for any test that exercises an Include(t => t.User)
+    /// path — EF Core InMemory performs an inner join for required navigation properties.
     /// </summary>
     public class TaskServiceTests
     {
@@ -28,374 +33,325 @@ namespace _10Pearls_Web_Project.Test.Services
             _loggerMock = new Mock<ILogger<TaskService>>();
         }
 
-        /// <summary>
-        /// Helper to create a new, isolated ApplicationDBContext using InMemoryDatabase.
-        /// </summary>
+        // ── Helpers ───────────────────────────────────────────────────────────
+
         private static ApplicationDBContext CreateDbContext()
         {
-            var dbName = Guid.NewGuid().ToString();
             var options = new DbContextOptionsBuilder<ApplicationDBContext>()
-                .UseInMemoryDatabase(databaseName: dbName)
+                .UseInMemoryDatabase(Guid.NewGuid().ToString())
                 .Options;
-
-            var dbLoggerMock = new Mock<ILogger<ApplicationDBContext>>();
-            return new ApplicationDBContext(options, dbLoggerMock.Object);
+            return new ApplicationDBContext(options, new Mock<ILogger<ApplicationDBContext>>().Object);
         }
 
-        #region CreateTaskAsync Tests
+        /// <summary>Mocks IHubContext so SignalR calls inside TaskService are no-ops.</summary>
+        private static IHubContext<TaskHub> CreateHubMock()
+        {
+            var hub     = new Mock<IHubContext<TaskHub>>();
+            var clients = new Mock<IHubClients>();
+            var proxy   = new Mock<IClientProxy>();
+
+            hub.Setup(h => h.Clients).Returns(clients.Object);
+            clients.Setup(c => c.Group(It.IsAny<string>())).Returns(proxy.Object);
+            proxy.Setup(p => p.SendCoreAsync(
+                    It.IsAny<string>(), It.IsAny<object[]>(), It.IsAny<CancellationToken>()))
+                 .Returns(Task.CompletedTask);
+
+            return hub.Object;
+        }
 
         /// <summary>
-        /// Verifies that CreateTaskAsync correctly saves a new task to the database
-        /// with the given user ID and correct UTC timestamps.
+        /// Seeds a minimal ApplicationUser so EF Core Include(t => t.User) can satisfy
+        /// the required navigation property and return the task row.
+        /// </summary>
+        private static async Task SeedUserAsync(ApplicationDBContext db, string userId)
+        {
+            db.Users.Add(new ApplicationUser
+            {
+                Id                 = userId,
+                UserName           = $"{userId}@test.com",
+                NormalizedUserName = $"{userId}@test.com".ToUpper(),
+                Email              = $"{userId}@test.com",
+                NormalizedEmail    = $"{userId}@test.com".ToUpper(),
+                FullName           = $"User {userId}",
+                SecurityStamp      = Guid.NewGuid().ToString()
+            });
+            await db.SaveChangesAsync();
+        }
+
+        // ── CreateTaskAsync ───────────────────────────────────────────────────
+
+        /// <summary>
+        /// Verifies that CreateTaskAsync saves the task with correct data and UTC timestamps.
         /// </summary>
         [Fact]
         public async Task CreateTaskAsync_ShouldCreateTaskAndSetTimestamps_WhenCalledWithValidData()
         {
-            // Arrange
-            using var dbContext = CreateDbContext();
-            var taskService = new TaskService(dbContext, _loggerMock.Object);
-            var userId = "user-1";
+            using var db = CreateDbContext();
+            await SeedUserAsync(db, "user-1");
+            var svc = new TaskService(db, _loggerMock.Object, CreateHubMock());
+
             var dto = new CreateTaskDTO
             {
-                Title = "Test Task",
+                Title       = "Test Task",
                 Description = "Task Description",
-                Status = AppTaskStatus.Pending,
-                Priority = AppTaskPriority.High,
-                DueDate = DateTime.UtcNow.AddDays(7)
+                Status      = AppTaskStatus.Pending,
+                Priority    = AppTaskPriority.High,
+                DueDate     = DateTime.UtcNow.AddDays(7)
             };
+            var start = DateTime.UtcNow;
 
-            var testStartTime = DateTime.UtcNow;
+            var result = await svc.CreateTaskAsync("user-1", dto);
 
-            // Act
-            var result = await taskService.CreateTaskAsync(userId, dto);
-
-            // Assert
             result.Should().NotBeNull();
             result.Id.Should().NotBeEmpty();
             result.Title.Should().Be(dto.Title);
             result.Description.Should().Be(dto.Description);
             result.Status.Should().Be(dto.Status);
             result.Priority.Should().Be(dto.Priority);
-            result.DueDate.Should().Be(dto.DueDate);
-            result.UserId.Should().Be(userId);
-            result.CreatedAt.Should().BeOnOrAfter(testStartTime);
-            result.UpdatedAt.Should().BeOnOrAfter(testStartTime);
+            result.UserId.Should().Be("user-1");
+            result.CreatedAt.Should().BeOnOrAfter(start);
+            result.UpdatedAt.Should().BeOnOrAfter(start);
 
-            // Verify database persistence
-            var dbTask = await dbContext.Tasks.FirstOrDefaultAsync(t => t.Id == result.Id);
-            dbTask.Should().NotBeNull();
-            dbTask!.Title.Should().Be(dto.Title);
+            (await db.Tasks.FirstOrDefaultAsync(t => t.Id == result.Id))
+                .Should().NotBeNull();
         }
 
-        #endregion
-
-        #region GetTasksAsync Tests
+        // ── GetTasksAsync ─────────────────────────────────────────────────────
 
         /// <summary>
-        /// Verifies that GetTasksAsync returns only the tasks belonging to the specified user
-        /// when the caller is not an Admin.
+        /// Verifies that a regular user only sees their own tasks.
         /// </summary>
         [Fact]
         public async Task GetTasksAsync_ShouldReturnOnlyUserTasks_WhenUserIsNotAdmin()
         {
-            // Arrange
-            using var dbContext = CreateDbContext();
-            var taskService = new TaskService(dbContext, _loggerMock.Object);
-            var user1 = "user-1";
-            var user2 = "user-2";
+            using var db = CreateDbContext();
+            await SeedUserAsync(db, "user-1");
+            await SeedUserAsync(db, "user-2");
+            var svc = new TaskService(db, _loggerMock.Object, CreateHubMock());
 
-            dbContext.Tasks.AddRange(new List<Tasks>
-            {
-                new() { Id = Guid.NewGuid(), Title = "Task 1", UserId = user1 },
-                new() { Id = Guid.NewGuid(), Title = "Task 2", UserId = user1 },
-                new() { Id = Guid.NewGuid(), Title = "Task 3", UserId = user2 }
-            });
-            await dbContext.SaveChangesAsync();
+            db.Tasks.AddRange(
+                new Tasks { Id = Guid.NewGuid(), Title = "U1-T1", UserId = "user-1" },
+                new Tasks { Id = Guid.NewGuid(), Title = "U1-T2", UserId = "user-1" },
+                new Tasks { Id = Guid.NewGuid(), Title = "U2-T1", UserId = "user-2" });
+            await db.SaveChangesAsync();
 
-            // Act
-            var tasks = await taskService.GetTasksAsync(user1, isAdmin: false);
+            var result = await svc.GetTasksAsync("user-1", isAdmin: false, page: 1, pageSize: 100, status: null, search: null, sortOrder: "desc");
 
-            // Assert
-            tasks.Should().HaveCount(2);
-            tasks.All(t => t.UserId == user1).Should().BeTrue();
+            result.Items.Should().HaveCount(2);
+            result.Items.All(t => t.UserId == "user-1").Should().BeTrue();
         }
 
         /// <summary>
-        /// Verifies that GetTasksAsync returns all tasks from the database
-        /// when the caller is an Admin.
+        /// Verifies that an Admin receives all tasks across all users.
         /// </summary>
         [Fact]
         public async Task GetTasksAsync_ShouldReturnAllTasks_WhenUserIsAdmin()
         {
-            // Arrange
-            using var dbContext = CreateDbContext();
-            var taskService = new TaskService(dbContext, _loggerMock.Object);
-            var user1 = "user-1";
-            var user2 = "user-2";
+            using var db = CreateDbContext();
+            await SeedUserAsync(db, "user-1");
+            await SeedUserAsync(db, "user-2");
+            var svc = new TaskService(db, _loggerMock.Object, CreateHubMock());
 
-            dbContext.Tasks.AddRange(new List<Tasks>
-            {
-                new() { Id = Guid.NewGuid(), Title = "Task 1", UserId = user1 },
-                new() { Id = Guid.NewGuid(), Title = "Task 2", UserId = user2 }
-            });
-            await dbContext.SaveChangesAsync();
+            db.Tasks.AddRange(
+                new Tasks { Id = Guid.NewGuid(), Title = "T1", UserId = "user-1" },
+                new Tasks { Id = Guid.NewGuid(), Title = "T2", UserId = "user-2" });
+            await db.SaveChangesAsync();
 
-            // Act
-            var tasks = await taskService.GetTasksAsync(user1, isAdmin: true);
+            var result = await svc.GetTasksAsync("user-1", isAdmin: true, page: 1, pageSize: 100, status: null, search: null, sortOrder: "desc");
 
-            // Assert
-            tasks.Should().HaveCount(2);
+            result.Items.Should().HaveCount(2);
         }
 
-        #endregion
-
-        #region GetTaskByIdAsync Tests
+        // ── GetTaskByIdAsync ──────────────────────────────────────────────────
 
         /// <summary>
-        /// Verifies that GetTaskByIdAsync returns the task when the owner requests it.
+        /// Verifies that the task owner can retrieve their task by ID.
         /// </summary>
         [Fact]
         public async Task GetTaskByIdAsync_ShouldReturnTask_WhenUserIsOwner()
         {
-            // Arrange
-            using var dbContext = CreateDbContext();
-            var taskService = new TaskService(dbContext, _loggerMock.Object);
-            var userId = "user-1";
+            using var db = CreateDbContext();
+            await SeedUserAsync(db, "user-1");
+            var svc    = new TaskService(db, _loggerMock.Object, CreateHubMock());
             var taskId = Guid.NewGuid();
 
-            dbContext.Tasks.Add(new Tasks { Id = taskId, Title = "My Task", UserId = userId });
-            await dbContext.SaveChangesAsync();
+            db.Tasks.Add(new Tasks { Id = taskId, Title = "My Task", UserId = "user-1" });
+            await db.SaveChangesAsync();
 
-            // Act
-            var result = await taskService.GetTaskByIdAsync(userId, taskId, isAdmin: false);
+            var result = await svc.GetTaskByIdAsync("user-1", taskId, isAdmin: false);
 
-            // Assert
             result.Should().NotBeNull();
             result!.Id.Should().Be(taskId);
             result.Title.Should().Be("My Task");
         }
 
         /// <summary>
-        /// Verifies that GetTaskByIdAsync returns null when a non-owner non-admin requests it.
+        /// Verifies that a non-owner non-admin cannot access another user's task.
         /// </summary>
         [Fact]
         public async Task GetTaskByIdAsync_ShouldReturnNull_WhenUserIsNotOwnerAndNotAdmin()
         {
-            // Arrange
-            using var dbContext = CreateDbContext();
-            var taskService = new TaskService(dbContext, _loggerMock.Object);
-            var ownerId = "user-1";
-            var requesterId = "user-2";
+            using var db = CreateDbContext();
+            await SeedUserAsync(db, "user-1");
+            var svc    = new TaskService(db, _loggerMock.Object, CreateHubMock());
             var taskId = Guid.NewGuid();
 
-            dbContext.Tasks.Add(new Tasks { Id = taskId, Title = "Secret Task", UserId = ownerId });
-            await dbContext.SaveChangesAsync();
+            db.Tasks.Add(new Tasks { Id = taskId, Title = "Secret Task", UserId = "user-1" });
+            await db.SaveChangesAsync();
 
-            // Act
-            var result = await taskService.GetTaskByIdAsync(requesterId, taskId, isAdmin: false);
+            var result = await svc.GetTaskByIdAsync("user-2", taskId, isAdmin: false);
 
-            // Assert
             result.Should().BeNull();
         }
 
         /// <summary>
-        /// Verifies that GetTaskByIdAsync returns the task when an Admin requests it,
-        /// even if the Admin does not own the task.
+        /// Verifies that an Admin can access any task regardless of ownership.
         /// </summary>
         [Fact]
         public async Task GetTaskByIdAsync_ShouldReturnTask_WhenUserIsNotOwnerButIsAdmin()
         {
-            // Arrange
-            using var dbContext = CreateDbContext();
-            var taskService = new TaskService(dbContext, _loggerMock.Object);
-            var ownerId = "user-1";
-            var adminId = "admin-1";
+            using var db = CreateDbContext();
+            await SeedUserAsync(db, "user-1");
+            var svc    = new TaskService(db, _loggerMock.Object, CreateHubMock());
             var taskId = Guid.NewGuid();
 
-            dbContext.Tasks.Add(new Tasks { Id = taskId, Title = "User Task", UserId = ownerId });
-            await dbContext.SaveChangesAsync();
+            db.Tasks.Add(new Tasks { Id = taskId, Title = "User Task", UserId = "user-1" });
+            await db.SaveChangesAsync();
 
-            // Act
-            var result = await taskService.GetTaskByIdAsync(adminId, taskId, isAdmin: true);
+            var result = await svc.GetTaskByIdAsync("admin-1", taskId, isAdmin: true);
 
-            // Assert
             result.Should().NotBeNull();
             result!.Id.Should().Be(taskId);
         }
 
-        #endregion
-
-        #region UpdateTaskAsync Tests
+        // ── UpdateTaskAsync ───────────────────────────────────────────────────
 
         /// <summary>
-        /// Verifies that UpdateTaskAsync updates only the fields provided in the DTO,
-        /// leaving the other fields untouched.
+        /// Verifies that only the fields present in the DTO are applied; others are preserved.
         /// </summary>
         [Fact]
         public async Task UpdateTaskAsync_ShouldApplyPartialUpdates_WhenUserIsOwner()
         {
-            // Arrange
-            using var dbContext = CreateDbContext();
-            var taskService = new TaskService(dbContext, _loggerMock.Object);
-            var userId = "user-1";
-            var taskId = Guid.NewGuid();
-            var originalDueDate = DateTime.UtcNow.AddDays(1);
+            using var db = CreateDbContext();
+            await SeedUserAsync(db, "user-1");
+            var svc           = new TaskService(db, _loggerMock.Object, CreateHubMock());
+            var taskId        = Guid.NewGuid();
+            var originalDate  = DateTime.UtcNow.AddDays(1);
 
-            var task = new Tasks
+            db.Tasks.Add(new Tasks
             {
-                Id = taskId,
-                Title = "Original Title",
+                Id          = taskId,
+                Title       = "Original Title",
                 Description = "Original Description",
-                Status = AppTaskStatus.Pending,
-                Priority = AppTaskPriority.Low,
-                DueDate = originalDueDate,
-                UserId = userId
-            };
-            dbContext.Tasks.Add(task);
-            await dbContext.SaveChangesAsync();
+                Status      = AppTaskStatus.Pending,
+                Priority    = AppTaskPriority.Low,
+                DueDate     = originalDate,
+                UserId      = "user-1"
+            });
+            await db.SaveChangesAsync();
 
-            // Partial update: Change only title and status, leave description, priority, and duedate alone.
             var updateDto = new UpdateTaskDTO
             {
-                Title = "Updated Title",
-                Status = AppTaskStatus.InProgress,
-                Description = null,
-                Priority = null,
-                DueDate = null
+                Title       = "Updated Title",
+                Status      = AppTaskStatus.InProgress,
+                Description = null,   // keep original
+                Priority    = null,   // keep original
+                DueDate     = null    // keep original
             };
 
-            // Act
-            var result = await taskService.UpdateTaskAsync(userId, taskId, updateDto);
+            var result = await svc.UpdateTaskAsync("user-1", taskId, updateDto, isAdmin: false);
 
-            // Assert
             result.Should().NotBeNull();
             result!.Title.Should().Be("Updated Title");
             result.Status.Should().Be(AppTaskStatus.InProgress);
-            result.Description.Should().Be("Original Description"); // Unchanged
-            result.Priority.Should().Be(AppTaskPriority.Low); // Unchanged
-            result.DueDate.Should().Be(originalDueDate); // Unchanged
+            result.Description.Should().Be("Original Description");
+            result.Priority.Should().Be(AppTaskPriority.Low);
+            result.DueDate.Should().Be(originalDate);
         }
 
         /// <summary>
-        /// Verifies that UpdateTaskAsync returns null and does not update the database
-        /// when a non-owner tries to update the task.
+        /// Verifies that a non-owner cannot update a task and the database stays unchanged.
         /// </summary>
         [Fact]
         public async Task UpdateTaskAsync_ShouldReturnNull_WhenUserIsNotOwner()
         {
-            // Arrange
-            using var dbContext = CreateDbContext();
-            var taskService = new TaskService(dbContext, _loggerMock.Object);
-            var ownerId = "user-1";
-            var hackerId = "user-2";
+            using var db = CreateDbContext();
+            await SeedUserAsync(db, "user-1");
+            var svc    = new TaskService(db, _loggerMock.Object, CreateHubMock());
             var taskId = Guid.NewGuid();
 
-            var task = new Tasks
-            {
-                Id = taskId,
-                Title = "Original Title",
-                UserId = ownerId
-            };
-            dbContext.Tasks.Add(task);
-            await dbContext.SaveChangesAsync();
+            db.Tasks.Add(new Tasks { Id = taskId, Title = "Original Title", UserId = "user-1" });
+            await db.SaveChangesAsync();
 
-            var updateDto = new UpdateTaskDTO { Title = "Hacked Title" };
+            var result = await svc.UpdateTaskAsync("user-2", taskId, new UpdateTaskDTO { Title = "Hacked" }, isAdmin: false);
 
-            // Act
-            var result = await taskService.UpdateTaskAsync(hackerId, taskId, updateDto);
-
-            // Assert
             result.Should().BeNull();
-            
-            // Check that db was not updated
-            var dbTask = await dbContext.Tasks.FindAsync(taskId);
-            dbTask!.Title.Should().Be("Original Title");
+            (await db.Tasks.FindAsync(taskId))!.Title.Should().Be("Original Title");
         }
 
-        #endregion
-
-        #region DeleteTaskAsync Tests
+        // ── DeleteTaskAsync ───────────────────────────────────────────────────
 
         /// <summary>
-        /// Verifies that DeleteTaskAsync successfully deletes the task when the owner requests it.
+        /// Verifies that the task owner can delete their task and it is removed from the DB.
         /// </summary>
         [Fact]
         public async Task DeleteTaskAsync_ShouldDeleteTask_WhenUserIsOwner()
         {
-            // Arrange
-            using var dbContext = CreateDbContext();
-            var taskService = new TaskService(dbContext, _loggerMock.Object);
-            var userId = "user-1";
+            using var db = CreateDbContext();
+            await SeedUserAsync(db, "user-1");
+            var svc    = new TaskService(db, _loggerMock.Object, CreateHubMock());
             var taskId = Guid.NewGuid();
 
-            dbContext.Tasks.Add(new Tasks { Id = taskId, Title = "Task to Delete", UserId = userId });
-            await dbContext.SaveChangesAsync();
+            db.Tasks.Add(new Tasks { Id = taskId, Title = "Task to Delete", UserId = "user-1" });
+            await db.SaveChangesAsync();
 
-            // Act
-            var deleted = await taskService.DeleteTaskAsync(userId, taskId);
+            var deleted = await svc.DeleteTaskAsync("user-1", taskId, isAdmin: false);
 
-            // Assert
             deleted.Should().BeTrue();
-            (await dbContext.Tasks.FindAsync(taskId)).Should().BeNull();
+            (await db.Tasks.FindAsync(taskId)).Should().BeNull();
         }
 
         /// <summary>
-        /// Verifies that DeleteTaskAsync returns false and does not delete the task
-        /// when a non-owner requests deletion.
+        /// Verifies that a non-owner cannot delete a task and it remains in the DB.
         /// </summary>
         [Fact]
         public async Task DeleteTaskAsync_ShouldNotDeleteTask_WhenUserIsNotOwner()
         {
-            // Arrange
-            using var dbContext = CreateDbContext();
-            var taskService = new TaskService(dbContext, _loggerMock.Object);
-            var ownerId = "user-1";
-            var requesterId = "user-2";
+            using var db = CreateDbContext();
+            await SeedUserAsync(db, "user-1");
+            var svc    = new TaskService(db, _loggerMock.Object, CreateHubMock());
             var taskId = Guid.NewGuid();
 
-            dbContext.Tasks.Add(new Tasks { Id = taskId, Title = "Task to Keep", UserId = ownerId });
-            await dbContext.SaveChangesAsync();
+            db.Tasks.Add(new Tasks { Id = taskId, Title = "Task to Keep", UserId = "user-1" });
+            await db.SaveChangesAsync();
 
-            // Act
-            var deleted = await taskService.DeleteTaskAsync(requesterId, taskId);
+            var deleted = await svc.DeleteTaskAsync("user-2", taskId, isAdmin: false);
 
-            // Assert
             deleted.Should().BeFalse();
-            (await dbContext.Tasks.FindAsync(taskId)).Should().NotBeNull();
+            (await db.Tasks.FindAsync(taskId)).Should().NotBeNull();
         }
 
-        #endregion
-
-        #region GetStatsAsync Tests
+        // ── GetStatsAsync ─────────────────────────────────────────────────────
 
         /// <summary>
-        /// Verifies that GetStatsAsync calculates the correct status counts for a regular user's tasks.
+        /// Verifies that stats counts are correct for a regular user (only their tasks counted).
         /// </summary>
         [Fact]
         public async Task GetStatsAsync_ShouldCalculateStatsCorrectly_ForRegularUser()
         {
-            // Arrange
-            using var dbContext = CreateDbContext();
-            var taskService = new TaskService(dbContext, _loggerMock.Object);
-            var userId = "user-1";
-            var otherUserId = "user-2";
+            using var db = CreateDbContext();
+            var svc = new TaskService(db, _loggerMock.Object, CreateHubMock());
 
-            dbContext.Tasks.AddRange(new List<Tasks>
-            {
-                new() { Id = Guid.NewGuid(), Title = "P1", Status = AppTaskStatus.Pending, UserId = userId },
-                new() { Id = Guid.NewGuid(), Title = "P2", Status = AppTaskStatus.Pending, UserId = userId },
-                new() { Id = Guid.NewGuid(), Title = "I1", Status = AppTaskStatus.InProgress, UserId = userId },
-                new() { Id = Guid.NewGuid(), Title = "C1", Status = AppTaskStatus.Completed, UserId = userId },
-                // Other user's tasks (should not be counted for user-1)
-                new() { Id = Guid.NewGuid(), Title = "O1", Status = AppTaskStatus.Completed, UserId = otherUserId }
-            });
-            await dbContext.SaveChangesAsync();
+            db.Tasks.AddRange(
+                new Tasks { Id = Guid.NewGuid(), Title = "P1", Status = AppTaskStatus.Pending,    UserId = "user-1" },
+                new Tasks { Id = Guid.NewGuid(), Title = "P2", Status = AppTaskStatus.Pending,    UserId = "user-1" },
+                new Tasks { Id = Guid.NewGuid(), Title = "I1", Status = AppTaskStatus.InProgress, UserId = "user-1" },
+                new Tasks { Id = Guid.NewGuid(), Title = "C1", Status = AppTaskStatus.Completed,  UserId = "user-1" },
+                new Tasks { Id = Guid.NewGuid(), Title = "O1", Status = AppTaskStatus.Completed,  UserId = "user-2" });
+            await db.SaveChangesAsync();
 
-            // Act
-            var stats = await taskService.GetStatsAsync(userId, isAdmin: false);
+            var stats = await svc.GetStatsAsync("user-1", isAdmin: false);
 
-            // Assert
-            stats.Should().NotBeNull();
             stats.Total.Should().Be(4);
             stats.Pending.Should().Be(2);
             stats.InProgress.Should().Be(1);
@@ -403,35 +359,26 @@ namespace _10Pearls_Web_Project.Test.Services
         }
 
         /// <summary>
-        /// Verifies that GetStatsAsync calculates the correct status counts across all tasks in the database for an Admin.
+        /// Verifies that an Admin's stats cover all tasks in the system.
         /// </summary>
         [Fact]
         public async Task GetStatsAsync_ShouldCalculateStatsCorrectly_ForAdmin()
         {
-            // Arrange
-            using var dbContext = CreateDbContext();
-            var taskService = new TaskService(dbContext, _loggerMock.Object);
-            var adminId = "admin-1";
+            using var db = CreateDbContext();
+            var svc = new TaskService(db, _loggerMock.Object, CreateHubMock());
 
-            dbContext.Tasks.AddRange(new List<Tasks>
-            {
-                new() { Id = Guid.NewGuid(), Title = "T1", Status = AppTaskStatus.Pending, UserId = "user-1" },
-                new() { Id = Guid.NewGuid(), Title = "T2", Status = AppTaskStatus.InProgress, UserId = "user-2" },
-                new() { Id = Guid.NewGuid(), Title = "T3", Status = AppTaskStatus.Completed, UserId = "user-3" }
-            });
-            await dbContext.SaveChangesAsync();
+            db.Tasks.AddRange(
+                new Tasks { Id = Guid.NewGuid(), Title = "T1", Status = AppTaskStatus.Pending,    UserId = "user-1" },
+                new Tasks { Id = Guid.NewGuid(), Title = "T2", Status = AppTaskStatus.InProgress, UserId = "user-2" },
+                new Tasks { Id = Guid.NewGuid(), Title = "T3", Status = AppTaskStatus.Completed,  UserId = "user-3" });
+            await db.SaveChangesAsync();
 
-            // Act
-            var stats = await taskService.GetStatsAsync(adminId, isAdmin: true);
+            var stats = await svc.GetStatsAsync("admin-1", isAdmin: true);
 
-            // Assert
-            stats.Should().NotBeNull();
             stats.Total.Should().Be(3);
             stats.Pending.Should().Be(1);
             stats.InProgress.Should().Be(1);
             stats.Completed.Should().Be(1);
         }
-
-        #endregion
     }
 }

@@ -9,14 +9,6 @@ export interface RegisterDTO {
   password: string;
 }
 
-export interface AuthResponse {
-  token: string;
-  id: string;
-  email: string;
-  fullName: string;
-  role: string;
-}
-
 export interface AuthUser {
   id: string;
   email: string;

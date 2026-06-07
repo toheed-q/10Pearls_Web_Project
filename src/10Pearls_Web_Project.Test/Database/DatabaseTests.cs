@@ -10,6 +10,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
@@ -77,6 +78,7 @@ namespace _10Pearls_Web_Project.Test.Database
             {
                 var options = new DbContextOptionsBuilder<ApplicationDBContext>()
                     .UseSqlite(connection)
+                    .ConfigureWarnings(w => w.Ignore(RelationalEventId.PendingModelChangesWarning))
                     .Options;
 
                 var loggerMock = new Mock<ILogger<ApplicationDBContext>>();

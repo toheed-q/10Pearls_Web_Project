@@ -28,7 +28,10 @@ namespace _10Pearls_Web_Project.Server.Services
             // ── 2. Seed default admin user ───────────────────────────────
             // Credentials come from config so they are never hardcoded in source
             var adminEmail    = config["Seed:AdminEmail"]    ?? "admin@system.com";
-            var adminPassword = config["Seed:AdminPassword"] ?? "Admin@123";
+            var adminPassword = config["Seed:AdminPassword"]
+                ?? throw new InvalidOperationException(
+                    "Seed:AdminPassword is not configured. " +
+                    "Set it in appsettings.Development.json, environment variables, or user secrets.");
             var adminFullName = config["Seed:AdminFullName"] ?? "System Admin";
 
             var existing = await userManager.FindByEmailAsync(adminEmail);

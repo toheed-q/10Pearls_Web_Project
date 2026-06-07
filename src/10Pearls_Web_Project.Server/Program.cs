@@ -5,11 +5,13 @@ using _10Pearls_Web_Project.Server.Models;
 using _10Pearls_Web_Project.Server.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Serilog;
 using System.Security.Claims;
 using System.Text;
+using System.Threading.RateLimiting;
 
 // Bootstrap logger for startup errors only
 Log.Logger = new LoggerConfiguration()
@@ -26,14 +28,27 @@ try
               .ReadFrom.Services(services)
               .Enrich.FromLogContext());
 
-    // CORS — allow the Vite dev server to connect (including WebSocket for SignalR)
+    // CORS — explicit headers and methods only; AllowAny* is overbroad for production
     builder.Services.AddCors(options =>
     {
         options.AddPolicy("SignalRPolicy", policy =>
             policy.WithOrigins("https://localhost:7633", "http://localhost:7633")
-                  .AllowAnyHeader()
-                  .AllowAnyMethod()
+                  .WithHeaders("Content-Type", "Authorization", "X-Requested-With")
+                  .WithMethods("GET", "POST", "PUT", "DELETE")
                   .AllowCredentials());
+    });
+
+    // Rate limiting — cap login attempts at 5 per IP per minute
+    builder.Services.AddRateLimiter(options =>
+    {
+        options.AddFixedWindowLimiter("login", opt =>
+        {
+            opt.PermitLimit             = 5;
+            opt.Window                  = TimeSpan.FromMinutes(1);
+            opt.QueueProcessingOrder    = QueueProcessingOrder.OldestFirst;
+            opt.QueueLimit              = 0;
+        });
+        options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
     });
 
     // Controllers — serialize enums as strings in JSON responses
@@ -82,15 +97,26 @@ try
             NameClaimType = ClaimTypes.NameIdentifier
         };
 
-        // SignalR sends JWT via query string when using WebSocket transport
+        // Resolve the JWT from either an httpOnly cookie (browsers) or the SignalR
+        // query-string token (WebSocket transport / non-browser clients).
         options.Events = new JwtBearerEvents
         {
             OnMessageReceived = ctx =>
             {
-                var accessToken = ctx.Request.Query["access_token"];
                 var path = ctx.HttpContext.Request.Path;
-                if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/hubs"))
-                    ctx.Token = accessToken;
+                if (path.StartsWithSegments("/hubs"))
+                {
+                    // SignalR: query-string token takes priority (non-browser clients)
+                    var qs = ctx.Request.Query["access_token"];
+                    if (!string.IsNullOrEmpty(qs))
+                    {
+                        ctx.Token = qs;
+                        return System.Threading.Tasks.Task.CompletedTask;
+                    }
+                }
+                // httpOnly cookie — works for both regular HTTP and hub negotiation
+                if (ctx.Request.Cookies.TryGetValue("auth-token", out var cookie))
+                    ctx.Token = cookie;
                 return System.Threading.Tasks.Task.CompletedTask;
             }
         };
@@ -130,6 +156,7 @@ try
     app.UseMiddleware<ExceptionMiddleware>();
 
     app.UseCors("SignalRPolicy");
+    app.UseRateLimiter();
 
     // Serilog HTTP request logging
     app.UseSerilogRequestLogging(options =>

@@ -36,7 +36,7 @@ export function SignIn() {
     setLoading(true);
     try {
       const data = await authService.login({ email, password });
-      setAuth({ id: data.id, email: data.email, fullName: data.fullName, role: data.role }, data.token);
+      setAuth(data);
       navigate('/');
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Login failed');

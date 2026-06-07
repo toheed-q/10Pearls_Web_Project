@@ -1,22 +1,19 @@
-// Centralized fetch wrapper — attaches JWT, handles errors consistently
+// Centralized fetch wrapper — sends httpOnly auth cookie automatically
 export async function apiRequest<T>(
   url: string,
   options: RequestInit = {}
 ): Promise<T> {
-  const token = localStorage.getItem('auth_token');
-
   const res = await fetch(url, {
     ...options,
+    credentials: 'include',   // browser sends httpOnly cookie on every request
     headers: {
       'Content-Type': 'application/json',
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...options.headers,
     },
   });
 
-  // Token expired or invalid — clear auth and reload to trigger redirect
+  // Cookie expired or invalid — clear user state and redirect to login
   if (res.status === 401) {
-    localStorage.removeItem('auth_token');
     localStorage.removeItem('auth_user');
     window.location.href = '/signin';
     throw new Error('Session expired. Please sign in again.');

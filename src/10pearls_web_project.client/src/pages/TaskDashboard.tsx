@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import * as signalR from '@microsoft/signalr';
 import type { AppTaskStatus, CreateTaskDTO, Task, UpdateTaskDTO } from '../types/task';
 import { taskService, type TaskStats } from '../services/taskService';
@@ -15,86 +15,67 @@ import './TaskDashboard.css';
 const PAGE_SIZE = 6;
 type SortOrder = 'asc' | 'desc';
 
-function deriveStats(tasks: Task[]): TaskStats {
-  return {
-    total:      tasks.length,
-    pending:    tasks.filter(t => t.status === 'Pending').length,
-    inProgress: tasks.filter(t => t.status === 'InProgress').length,
-    completed:  tasks.filter(t => t.status === 'Completed').length,
-  };
-}
-
 export function TaskDashboard() {
   const { user, isAdmin, logout } = useAuth();
   const navigate = useNavigate();
   const { toasts, show, dismiss } = useToast();
 
-  const [tasks, setTasks]         = useState<Task[]>([]);
-  const [loading, setLoading]     = useState(true);
-  const [saving, setSaving]       = useState(false);
-  const [exporting, setExporting] = useState(false);
+  const [tasks, setTasks]           = useState<Task[]>([]);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
+  const [stats, setStats]           = useState<TaskStats>({ total: 0, pending: 0, inProgress: 0, completed: 0 });
+  const [loading, setLoading]       = useState(true);
+  const [saving, setSaving]         = useState(false);
+  const [exporting, setExporting]   = useState(false);
 
   const [statusFilter, setStatusFilter] = useState<AppTaskStatus | 'All'>('All');
-  const [sortOrder, setSortOrder]       = useState<SortOrder>('asc');
+  const [sortOrder, setSortOrder]       = useState<SortOrder>('desc');
   const [search, setSearch]             = useState('');
   const [page, setPage]                 = useState(1);
 
   const [showForm, setShowForm]       = useState(false);
   const [editingTask, setEditingTask] = useState<Task | undefined>();
 
-  const onTaskCreated = useCallback((task: Task) => {
-    const normalized = { ...task, id: task.id.toLowerCase() };
-    setTasks(prev => {
-      if (prev.some(t => t.id === normalized.id)) return prev;
-      return [normalized, ...prev];
-    });
-  }, []);
+  // Ref so SignalR callbacks (registered once with empty deps) always call the latest loadPage
+  const reloadRef = useRef<() => void>(() => {});
 
-  const onTaskUpdated = useCallback((task: Task) => {
-    const normalized = { ...task, id: task.id.toLowerCase() };
-    setTasks(prev => prev.map(t => t.id === normalized.id ? normalized : t));
-  }, []);
-
-  const onTaskDeleted = useCallback((taskId: string) => {
-    setTasks(prev => prev.filter(t => t.id !== taskId.toLowerCase()));
-  }, []);
-
-  const onTaskStatusChanged = useCallback((task: Task) => {
-    const normalized = { ...task, id: task.id.toLowerCase() };
-    setTasks(prev => prev.map(t => t.id === normalized.id ? normalized : t));
-  }, []);
-
-  const { connectionState } = useTaskHub({ onTaskCreated, onTaskUpdated, onTaskDeleted, onTaskStatusChanged });
-
-  const stats = useMemo(() => deriveStats(tasks), [tasks]);
-
-  useEffect(() => { loadAll(); }, []);
-
-  async function loadAll() {
+  const loadPage = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await taskService.getAll();
-      setTasks(data.map(t => ({ ...t, id: t.id.toLowerCase() })));
+      const [data, statsData] = await Promise.all([
+        taskService.getAll({
+          page,
+          pageSize: PAGE_SIZE,
+          status:    statusFilter === 'All' ? undefined : statusFilter,
+          search:    search || undefined,
+          sortOrder,
+        }),
+        taskService.getStats(),
+      ]);
+      setTasks(data.items.map(t => ({ ...t, id: t.id.toLowerCase() })));
+      setTotalPages(data.totalPages);
+      setTotalCount(data.totalCount);
+      setStats(statsData);
     } catch {
       show('Failed to load tasks', 'error');
     } finally {
       setLoading(false);
     }
-  }
+  }, [page, statusFilter, search, sortOrder, show]);
 
-  const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    let result = statusFilter === 'All' ? tasks : tasks.filter(t => t.status === statusFilter);
-    if (q) result = result.filter(t => t.title.toLowerCase().includes(q));
-    result = [...result].sort((a, b) => {
-      const diff = new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
-      return sortOrder === 'asc' ? diff : -diff;
-    });
-    return result;
-  }, [tasks, statusFilter, sortOrder, search]);
+  // Keep ref pointing to the freshest loadPage so SignalR callbacks stay accurate
+  useEffect(() => { reloadRef.current = loadPage; }, [loadPage]);
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
-  const paginated  = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  // Reload whenever page, filter, search, or sort changes
+  useEffect(() => { loadPage(); }, [loadPage]);
+
+  // SignalR: stable callbacks (empty deps) that always invoke the latest loadPage via ref
+  const onTaskCreated       = useCallback((_t: Task)   => { reloadRef.current(); }, []);
+  const onTaskUpdated       = useCallback((_t: Task)   => { reloadRef.current(); }, []);
+  const onTaskDeleted       = useCallback((_id: string) => { reloadRef.current(); }, []);
+  const onTaskStatusChanged = useCallback((_t: Task)   => { reloadRef.current(); }, []);
+
+  const { connectionState } = useTaskHub({ onTaskCreated, onTaskUpdated, onTaskDeleted, onTaskStatusChanged });
 
   function handleFilterChange(value: AppTaskStatus | 'All') { setStatusFilter(value); setPage(1); }
   function handleSearch(value: string) { setSearch(value); setPage(1); }
@@ -105,6 +86,7 @@ export function TaskDashboard() {
       await taskService.create(dto);
       setShowForm(false);
       show('Task created');
+      await loadPage();
     } finally { setSaving(false); }
   }
 
@@ -116,11 +98,11 @@ export function TaskDashboard() {
         title: dto.title, description: dto.description,
         dueDate: dto.dueDate, status: dto.status, priority: dto.priority,
       };
-      const updated = await taskService.update(editingTask.id, updateDto);
-      setTasks(prev => prev.map(t => t.id === updated.id ? updated : t));
+      await taskService.update(editingTask.id, updateDto);
       setEditingTask(undefined);
       setShowForm(false);
       show('Task updated');
+      await loadPage();
     } finally { setSaving(false); }
   }
 
@@ -128,8 +110,8 @@ export function TaskDashboard() {
     if (!confirm('Delete this task?')) return;
     try {
       await taskService.delete(id);
-      setTasks(prev => prev.filter(t => t.id !== id));
       show('Task deleted');
+      await loadPage();
     } catch { show('Failed to delete task', 'error'); }
   }
 
@@ -314,7 +296,7 @@ export function TaskDashboard() {
             <button className={`sort-btn ${sortOrder === 'desc' ? 'active' : ''}`} onClick={() => setSortOrder('desc')}>↓ Latest</button>
           </div>
 
-          <span className="task-count">{filtered.length} task{filtered.length !== 1 ? 's' : ''}</span>
+          <span className="task-count">{totalCount} task{totalCount !== 1 ? 's' : ''}</span>
 
           <button className="btn-export" onClick={handleExportCsv} disabled={exporting}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="13" height="13">
@@ -333,7 +315,7 @@ export function TaskDashboard() {
           </div>
         ) : (
           <TaskList
-            tasks={paginated}
+            tasks={tasks}
             onEdit={t => { setEditingTask(t); setShowForm(true); }}
             onDelete={handleDelete}
             showOwner={isAdmin}

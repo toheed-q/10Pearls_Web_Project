@@ -10,12 +10,36 @@ export interface TaskStats {
   completed: number;
 }
 
+export interface PagedTasksResponse {
+  items: Task[];
+  totalCount: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+}
+
+export interface TaskQueryParams {
+  page?: number;
+  pageSize?: number;
+  status?: string;
+  search?: string;
+  sortOrder?: string;
+}
+
 export const taskService = {
   getStats: () =>
     apiRequest<TaskStats>(`${BASE}/stats`),
 
-  getAll: () =>
-    apiRequest<Task[]>(BASE),
+  getAll: (params: TaskQueryParams = {}) => {
+    const qs = new URLSearchParams();
+    if (params.page)      qs.set('page',      String(params.page));
+    if (params.pageSize)  qs.set('pageSize',   String(params.pageSize));
+    if (params.status)    qs.set('status',     params.status);
+    if (params.search)    qs.set('search',     params.search);
+    if (params.sortOrder) qs.set('sortOrder',  params.sortOrder);
+    const query = qs.toString();
+    return apiRequest<PagedTasksResponse>(`${BASE}${query ? '?' + query : ''}`);
+  },
 
   getById: (id: string) =>
     apiRequest<Task>(`${BASE}/${id}`),
@@ -30,13 +54,11 @@ export const taskService = {
     apiRequest<void>(`${BASE}/${id}`, { method: 'DELETE' }),
 
   exportCsv: async (): Promise<void> => {
-    const token = localStorage.getItem('auth_token');
     const res = await fetch(`${BASE}/export/csv`, {
-      headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+      credentials: 'include',  // httpOnly cookie sent automatically
     });
 
     if (res.status === 401) {
-      localStorage.removeItem('auth_token');
       localStorage.removeItem('auth_user');
       window.location.href = '/signin';
       throw new Error('Session expired.');

@@ -15,7 +15,7 @@ namespace _10Pearls_Web_Project.Server.Services
             _config = config;
         }
 
-        public string GenerateToken(ApplicationUser user, IList<string> roles)
+        public virtual string GenerateToken(ApplicationUser user, IList<string> roles)
         {
             var jwtSettings = _config.GetSection("Jwt");
 

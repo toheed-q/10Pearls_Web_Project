@@ -56,22 +56,52 @@ namespace _10Pearls_Web_Project.Server.Services
             return result;
         }
 
-        public async Task<List<TaskResponseDTO>> GetTasksAsync(string userId, bool isAdmin)
+        public async Task<TaskPagedResponseDTO> GetTasksAsync(
+            string userId, bool isAdmin,
+            int page, int pageSize,
+            string? status, string? search, string sortOrder)
         {
             var query = isAdmin
                 ? _db.Tasks.Include(t => t.User).AsQueryable()
                 : _db.Tasks.Include(t => t.User).Where(t => t.UserId == userId);
 
-            var tasks = await query
-                .OrderByDescending(t => t.CreatedAt)
+            // Server-side status filter
+            if (!string.IsNullOrWhiteSpace(status) &&
+                Enum.TryParse<AppTaskStatus>(status, out var parsedStatus))
+                query = query.Where(t => t.Status == parsedStatus);
+
+            // Server-side keyword search across title and description
+            if (!string.IsNullOrWhiteSpace(search))
+                query = query.Where(t =>
+                    t.Title.Contains(search) ||
+                    (t.Description != null && t.Description.Contains(search)));
+
+            // Sort by due date
+            query = sortOrder.Equals("asc", StringComparison.OrdinalIgnoreCase)
+                ? query.OrderBy(t => t.DueDate)
+                : query.OrderByDescending(t => t.DueDate);
+
+            var totalCount = await query.CountAsync();
+            var totalPages = (int)Math.Ceiling((double)totalCount / pageSize);
+
+            var items = await query
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
                 .Select(t => MapToDTO(t))
                 .ToListAsync();
 
             _logger.LogInformation(
-                "Retrieved {Count} tasks for User {UserId} (isAdmin={IsAdmin})",
-                tasks.Count, userId, isAdmin);
+                "Page {Page}/{TotalPages} ({Count} items) for User {UserId} (isAdmin={IsAdmin})",
+                page, Math.Max(1, totalPages), items.Count, userId, isAdmin);
 
-            return tasks;
+            return new TaskPagedResponseDTO
+            {
+                Items      = items,
+                TotalCount = totalCount,
+                Page       = page,
+                PageSize   = pageSize,
+                TotalPages = Math.Max(1, totalPages)
+            };
         }
 
         public async Task<TaskResponseDTO?> GetTaskByIdAsync(string userId, Guid taskId, bool isAdmin)

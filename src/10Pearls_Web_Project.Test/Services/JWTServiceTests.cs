@@ -4,6 +4,7 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Linq;
 using System.Security.Claims;
 using _10Pearls_Web_Project.Server.Models;
+using _10Pearls_Web_Project.Server.Services;
 using FluentAssertions;
 using Microsoft.Extensions.Configuration;
 using Xunit;
@@ -72,7 +73,7 @@ namespace _10Pearls_Web_Project.Test.Services
             emailClaim.Should().NotBeNull();
             emailClaim!.Value.Should().Be(user.Email);
 
-            var fullNameClaim = claims.FirstOrDefault(c => c.Type == "FullName");
+            var fullNameClaim = claims.FirstOrDefault(c => c.Type == ClaimTypes.Name);
             fullNameClaim.Should().NotBeNull();
             fullNameClaim!.Value.Should().Be(user.FullName);
 

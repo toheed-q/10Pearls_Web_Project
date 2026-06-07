@@ -9,13 +9,13 @@ import { Profile } from './pages/Profile';
 import { Chatbot } from './components/Chatbot';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { token } = useAuth();
-  return token ? <>{children}</> : <Navigate to="/signin" replace />;
+  const { user } = useAuth();
+  return user ? <>{children}</> : <Navigate to="/signin" replace />;
 }
 
 function AdminRoute({ children }: { children: React.ReactNode }) {
-  const { token, isAdmin } = useAuth();
-  if (!token) return <Navigate to="/signin" replace />;
+  const { user, isAdmin } = useAuth();
+  if (!user)    return <Navigate to="/signin" replace />;
   if (!isAdmin) return <Navigate to="/" replace />;
   return <>{children}</>;
 }

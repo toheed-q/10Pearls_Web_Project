@@ -64,15 +64,24 @@ namespace _10Pearls_Web_Project.Server.Controllers
             return CreatedAtAction(nameof(GetTaskById), new { id = task.Id }, task);
         }
 
-        // GET /api/tasks
+        // GET /api/tasks?page=1&pageSize=6&status=Pending&search=fix&sortOrder=desc
         [HttpGet]
-        public async Task<IActionResult> GetTasks()
+        public async Task<IActionResult> GetTasks(
+            [FromQuery] int    page      = 1,
+            [FromQuery] int    pageSize  = 6,
+            [FromQuery] string? status   = null,
+            [FromQuery] string? search   = null,
+            [FromQuery] string  sortOrder = "desc")
         {
             var userId = CurrentUserId;
             if (userId == null) return Unauthorized();
 
-            var tasks = await _taskService.GetTasksAsync(userId, IsAdmin);
-            return Ok(tasks);
+            page     = Math.Max(1, page);
+            pageSize = Math.Clamp(pageSize, 1, 100);
+
+            var result = await _taskService.GetTasksAsync(
+                userId, IsAdmin, page, pageSize, status, search, sortOrder);
+            return Ok(result);
         }
 
         // GET /api/tasks/{id}

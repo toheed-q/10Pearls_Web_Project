@@ -5,6 +5,7 @@ using _10Pearls_Web_Project.Server.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using System.Security.Claims;
 
 namespace _10Pearls_Web_Project.Server.Controllers
@@ -50,6 +51,7 @@ namespace _10Pearls_Web_Project.Server.Controllers
 
         [HttpPost("login")]
         [Consumes("application/json")]
+        [EnableRateLimiting("login")]
         public async Task<IActionResult> Login(LoginDTO dto)
         {
             _logger.LogInformation("Login attempt for {Email}", dto.Email);
@@ -62,8 +64,39 @@ namespace _10Pearls_Web_Project.Server.Controllers
                 return Unauthorized(new { message = error });
             }
 
+            // Store JWT in an httpOnly cookie — JS cannot read or steal it
+            var isLocalhost = HttpContext.Request.Host.Host.Equals("localhost",
+                StringComparison.OrdinalIgnoreCase);
+
+            Response.Cookies.Append("auth-token", data!.Token, new CookieOptions
+            {
+                HttpOnly = true,
+                Secure   = !isLocalhost,          // HTTPS-only in production
+                SameSite = SameSiteMode.Strict,
+                Expires  = DateTimeOffset.UtcNow.AddMinutes(60),
+                Path     = "/"
+            });
+
             _logger.LogInformation("Login successful for {Email}", dto.Email);
-            return Ok(data);
+
+            // Return user info only — the token stays in the httpOnly cookie
+            return Ok(new { data.Id, data.Email, data.FullName, data.Role });
+        }
+
+        [HttpPost("logout")]
+        public IActionResult Logout()
+        {
+            var isLocalhost = HttpContext.Request.Host.Host.Equals("localhost",
+                StringComparison.OrdinalIgnoreCase);
+
+            Response.Cookies.Delete("auth-token", new CookieOptions
+            {
+                HttpOnly = true,
+                Secure   = !isLocalhost,
+                SameSite = SameSiteMode.Strict,
+                Path     = "/"
+            });
+            return NoContent();
         }
 
         [Authorize(Roles = Roles.Admin)]

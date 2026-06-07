@@ -18,9 +18,14 @@ namespace _10Pearls_Web_Project.Server.Services
         {
             _logger.LogInformation("User {UserId} requested CSV export (isAdmin={IsAdmin})", userId, isAdmin);
 
-            var tasks = await _taskService.GetTasksAsync(userId, isAdmin);
+            // Fetch all records (no pagination) for export
+            var result = await _taskService.GetTasksAsync(
+                userId, isAdmin,
+                page: 1, pageSize: int.MaxValue,
+                status: null, search: null, sortOrder: "desc");
 
-            var csv = BuildCsv(tasks);
+            var tasks = result.Items;
+            var csv   = BuildCsv(tasks);
             var bytes = Encoding.UTF8.GetBytes(csv);
             var fileName = $"tasks-export-{DateTime.UtcNow:yyyyMMdd}.csv";
 
