@@ -65,6 +65,18 @@ A comprehensive, enterprise-grade Task Management System built with modern softw
 | SQL Server | 2019 or later (Express/Developer/Enterprise) | [Download SQL Server](https://www.microsoft.com/sql-server) |
 | Visual Studio 2022 | Version 17.10 or later | [Download Visual Studio](https://visualstudio.microsoft.com/) |
 | Git | Latest | [Download Git](https://git-scm.com/) |
+### Class Diagram 
+<img width="1281" height="820" alt="image" src="https://github.com/user-attachments/assets/54f3131d-b90c-4086-93ba-7463e6ecaae8" />
+
+### UseCase Diagram 
+<img width="740" height="1364" alt="image" src="https://github.com/user-attachments/assets/82bacedf-3bcc-4f6d-80d0-658a8b5de5f4" />
+
+
+
+
+### Activity Diagram 
+<img width="753" height="1445" alt="image" src="https://github.com/user-attachments/assets/5489b32f-6ef1-4765-a02a-d02d4725c308" />
+
 
 ### Verify Installations
 ```bash
