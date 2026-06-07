@@ -189,7 +189,6 @@ dotnet ef database update
 
 ### 2. Database Seeding
 The application automatically seeds:
-- Default admin user (email: admin@example.com, password: Admin@123)
 - Basic role structure (Admin, User)
 - Sample tasks for demonstration
 
@@ -436,3 +435,8 @@ npm install
 - Serilog captures all errors with context
 - Browser developer tools for frontend debugging
 - Enable detailed logging in development environment
+
+
+
+<img width="740" height="1364" alt="image" src="https://github.com/user-attachments/assets/e3789b6b-aad7-44b6-b8d6-16e4a24dd3c6" />
+
